@@ -10,6 +10,8 @@
 
 # Import packages
 
+import os
+
 import numpy as np
 
 # Energies in [MeV]

@@ -10,11 +10,11 @@
 
 # Import packages
 
+import numpy as np
+
 import mute.constants as constants
 import mute.surface as surface
 import mute.propagation as propagation
-
-import numpy as np
 
 # Calculate underground fluxes
 

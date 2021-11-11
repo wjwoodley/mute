@@ -10,10 +10,12 @@
 
 # Import packages
 
-import mute.constants as constants
+import os
 
 import numpy as np
 from tqdm import tqdm
+
+import mute.constants as constants
 
 # Calculate surface fluxes
 

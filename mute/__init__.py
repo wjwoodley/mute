@@ -35,4 +35,4 @@ def download_file(url):
 
 if not os.path.isfile(os.path.join(os.path.dirname(__file__), "data", "data_20211110.txt")):
 
-    download_file("") # GITHUB RELEASE ZIP URL HERE
+    download_file("https://github.com/wjwoodley/mute/releases/download/0.1.0/data_20211110.zip")
