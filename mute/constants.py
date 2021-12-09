@@ -3,7 +3,7 @@
 ###                    ###
 ###  MUTE              ###
 ###  William Woodley   ###
-###  10 November 2021  ###
+###  23 November 2021  ###
 ###                    ###
 ##########################
 ##########################
@@ -16,7 +16,7 @@ import numpy as np
 
 # Energies in [MeV]
 
-E_BINS = np.logspace(1.9, 14, 122)  # Bin edges
+E_BINS = np.logspace(1.9, 14, 122)[:-30]  # Bin edges
 E_WIDTHS = np.diff(E_BINS)  # Bin widths
 ENERGIES = np.sqrt(E_BINS[1:] * E_BINS[:-1])  # Bin centers
 
@@ -29,14 +29,14 @@ energies = ENERGIES
 # The user can enter their own angles in the function calls, which will interpolate over the grids created by these angles
 
 SLANT_DEPTHS = np.linspace(1, 12, 23)
-ANGLES = np.degrees(np.arccos(1 / SLANT_DEPTHS))
+ANGLES       = np.degrees(np.arccos(1 / SLANT_DEPTHS))
 
 slant_depths = SLANT_DEPTHS
-angles = ANGLES
+angles       = ANGLES
 
 # Angles in [degrees] specifically for the calculation of surface flux matrices
 
-ANGLES_FOR_S_FLUXES = np.degrees(np.arccos(1 / np.linspace(1, 12, 45)))
+ANGLES_FOR_S_FLUXES = np.linspace(0, 90, 20)
 
 # Length values for file comparisons
 
@@ -57,7 +57,7 @@ _overburden = "flat"
 _vertical_depth = 1
 _medium = "rock"
 _density = 2.65
-_n_muon = 1000
+_n_muon = 100000
 
 # Setters and getters for global constants
 
@@ -193,8 +193,15 @@ def set_vertical_depth(vertical_depth):
     _vertical_depth = vertical_depth
 
     # Use the set vertical depth to calculate new slant depths and zenith angles
-
-    slant_depths = SLANT_DEPTHS[SLANT_DEPTHS >= _vertical_depth]
+    
+    if _vertical_depth not in slant_depths:
+        
+        slant_depths = np.sort(np.concatenate(([_vertical_depth], SLANT_DEPTHS[SLANT_DEPTHS >= _vertical_depth])))
+    
+    else:
+        
+        slant_depths = SLANT_DEPTHS[SLANT_DEPTHS >= _vertical_depth]
+    
     angles = np.degrees(np.arccos(_vertical_depth / slant_depths))
 
 
@@ -495,7 +502,7 @@ def clear():
     _vertical_depth = 1
     _medium = "rock"
     _density = 2.65
-    _n_muon = 1000
+    _n_muon = 100000
 
     # Global weight variables
     # Set the variables to None first, in case they do not already exist
@@ -538,7 +545,7 @@ def clear():
     global len_iju
     global MU_MASS
 
-    E_BINS = np.logspace(1.9, 14, 122)  # [MeV]
+    E_BINS = np.logspace(1.9, 14, 122)[:-30]  # [MeV]
     E_WIDTHS = np.diff(E_BINS)  # [MeV]
     ENERGIES = np.sqrt(E_BINS[1:] * E_BINS[:-1])  # [MeV]
     e_bins = E_BINS  # [MeV]
@@ -548,7 +555,7 @@ def clear():
     ANGLES = np.degrees(np.arccos(1 / SLANT_DEPTHS))  # [degrees]
     slant_depths = SLANT_DEPTHS  # [km.w.e.]
     angles = ANGLES  # [degrees]
-    ANGLES_FOR_S_FLUXES = np.degrees(np.arccos(1 / np.linspace(1, 12, 45)))  # [degrees]
+    ANGLES_FOR_S_FLUXES = np.linspace(0, 90, 20)  # [degrees]
     len_ij = len(ENERGIES) * len(ANGLES_FOR_S_FLUXES)
     len_iju = len(ENERGIES) * len(ANGLES) * len(ENERGIES)
     MU_MASS = 105.6583745  # [MeV]

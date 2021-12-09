@@ -14,11 +14,10 @@ except ImportError:
 
     pass
 
-mtc.clear()
-
-
 @pytest.mark.skipif("proposal" not in sys.modules, reason="Requires proposal.")
 def test_propagation():
+    
+    mtc.clear()
 
     mtc.set_n_muon(3)
     mtp._create_propagator(force = True)

@@ -3,7 +3,7 @@
 ###                    ###
 ###  MUTE              ###
 ###  William Woodley   ###
-###  10 November 2021  ###
+###  23 November 2021  ###
 ###                    ###
 ##########################
 ##########################
@@ -28,6 +28,7 @@ def calc_s_fluxes(
     atmosphere="CORSIKA",
     output=None,
     force=False,
+    test=False,
 ):
 
     """
@@ -58,8 +59,11 @@ def calc_s_fluxes(
     output : bool, optional (default: taken from constants.get_output())
         If True, an output file will be created to store the results.
 
-    force : bool
+    force : bool, optional (default: False)
         If True, this will force the creation of a surface_fluxes directory if one does not already exist.
+    
+    test: bool, optional (default: False)
+        For use in the file test_s_fluxes.py. If True, this will calculate surface fluxes for only three angles.
 
     Returns
     -------
@@ -88,28 +92,20 @@ def calc_s_fluxes(
 
     assert primary_model in primary_models
     assert atmosphere in ["CORSIKA", "MSIS00"]
+    
+    angles = constants.ANGLES_FOR_S_FLUXES
+    
+    if test:
+        
+        angles = [0, 30, 60]
 
     # Set MCEq up
 
     if constants.get_verbose() > 1:
 
-        print(
-            "Calculating surface fluxes for "
-            + location
-            + " using "
-            + interaction_model
-            + " and "
-            + primary_model
-            + "."
-        )
+        print("Calculating surface fluxes for " + location + " using " + interaction_model + " and " + primary_model + ".")
 
-        mceq_run = MCEqRun(
-            interaction_model=interaction_model,
-            primary_model=primary_models[primary_model],
-            theta_deg=0.0,
-            **mceq_config.config
-        )
-
+        mceq_run = MCEqRun(interaction_model=interaction_model, primary_model=primary_models[primary_model], theta_deg=0.0, **mceq_config.config)
         mceq_run.set_density_model((atmosphere, (location, month)))
 
     else:
@@ -118,35 +114,22 @@ def calc_s_fluxes(
 
         with open(os.devnull, "w") as suppress, redirect_stdout(suppress):
 
-            mceq_run = MCEqRun(
-                interaction_model=interaction_model,
-                primary_model=primary_models[primary_model],
-                theta_deg=0.0,
-                **mceq_config.config
-            )
-
+            mceq_run = MCEqRun(interaction_model=interaction_model, primary_model=primary_models[primary_model], theta_deg=0.0, **mceq_config.config)
             mceq_run.set_density_model((atmosphere, (location, month)))
 
     # Run MCEq
     # Convert the surface fluxes from [GeV] to [MeV] to use in PROPOSAL
 
-    s_fluxes = np.zeros((len(constants.ENERGIES), len(constants.ANGLES_FOR_S_FLUXES)))
+    s_fluxes = np.zeros((len(constants.ENERGIES), len(angles)))
 
     # Run MCEq
 
-    for j in (
-        tqdm(range(len(constants.ANGLES_FOR_S_FLUXES)))
-        if constants.get_verbose() >= 1
-        else range(len(constants.ANGLES_FOR_S_FLUXES))
-    ):
+    for j in (tqdm(range(len(angles))) if constants.get_verbose() >= 1 else range(len(angles))):
 
-        mceq_run.set_theta_deg(constants.ANGLES_FOR_S_FLUXES[j])
+        mceq_run.set_theta_deg(angles[j])
         mceq_run.solve()
-
-        s_fluxes[:, j] = (
-            mceq_run.get_solution("total_mu+", mag=0)
-            + mceq_run.get_solution("total_mu-", mag=0)
-        ) * 1e-3
+        
+        s_fluxes[:, j] = 1e-3*(mceq_run.get_solution("total_mu+", mag=0) + mceq_run.get_solution("total_mu-", mag=0))[:-30]
 
     if constants.get_verbose() > 1:
         print("Finished calculating surface fluxes.")
@@ -155,48 +138,26 @@ def calc_s_fluxes(
 
     if output:
 
-        constants.check_directory(
-            constants.get_directory() + "/surface_fluxes", force=force
-        )
+        constants.check_directory(os.path.join(constants.get_directory(), "surface_fluxes"), force=force)
 
         if month is None:
-
-            file_name = (
-                constants.get_directory()
-                + "/surface_fluxes/Surface_Fluxes_"
-                + location
-                + "_"
-                + interaction_model
-                + "_"
-                + primary_model
-                + ".txt"
-            )
+            
+            file_name = os.path.join(constants.get_directory(), "surface_fluxes", "Surface_Fluxes_{0}_{1}_{2}.txt".format(location, interaction_model, primary_model))
 
         else:
-
-            file_name = (
-                constants.get_directory()
-                + "/surface_fluxes/Surface_Fluxes_"
-                + location
-                + "_"
-                + month
-                + "_"
-                + interaction_model
-                + "_"
-                + primary_model
-                + ".txt"
-            )
+            
+            file_name = os.path.join(constants.get_directory(), "surface_fluxes", "Surface_Fluxes_{0}_{1}_{2}_{3}.txt".format(location, month, interaction_model, primary_model))
 
         file_out = open(file_name, "w")
 
         for i in range(len(constants.ENERGIES)):
 
-            for j in range(len(constants.ANGLES_FOR_S_FLUXES)):
+            for j in range(len(angles)):
 
                 file_out.write(
                     "{0:1.14f} {1:1.5f} {2:1.14e}\n".format(
                         constants.ENERGIES[i],
-                        constants.ANGLES_FOR_S_FLUXES[j],
+                        angles[j],
                         s_fluxes[i, j],
                     )
                 )
@@ -219,6 +180,7 @@ def load_s_fluxes_from_file(
     primary_model="GSF",
     atmosphere="CORSIKA",
     force=False,
+    test=False,
 ):
 
     """
@@ -246,8 +208,11 @@ def load_s_fluxes_from_file(
     atmosphere : {"CORSIKA", "MSIS00"}, optional (default: "CORSIKA")
         The atmospheric model. For US Standard Atmosphere, use "CORSIKA". For seasonal variations, use "MSIS00".
 
-    force : bool
+    force : bool, optional (default: False)
         If True, force the calculation of a new surface fluxes matrix if required.
+    
+    test: bool, optional (default: False)
+        For use in the file test_s_fluxes.py. If True, this will load surface fluxes for only three angles.
 
     Returns
     -------
@@ -258,6 +223,12 @@ def load_s_fluxes_from_file(
     # Check values
 
     constants.check_constants(force=force)
+    
+    angles = constants.ANGLES_FOR_S_FLUXES
+    
+    if test:
+        
+        angles = [0, 30, 60]
 
     # Define a function to run if there is no surface fluxes file
 
@@ -267,20 +238,11 @@ def load_s_fluxes_from_file(
 
         if not force:
 
-            answer = input(
-                "No surface flux matrix currently exists for these models. Would you like to create one (y/n)?: "
-            )
+            answer = input("No surface flux matrix currently exists for these models. Would you like to create one (y/n)?: ")
 
         if force or answer.lower() == "y":
 
-            s_fluxes_full = calc_s_fluxes(
-                location,
-                month,
-                interaction_model,
-                primary_model,
-                atmosphere,
-                force=force,
-            )
+            s_fluxes_full = calc_s_fluxes(location, month, interaction_model, primary_model, atmosphere, force=force)
 
             return s_fluxes_full
 
@@ -294,31 +256,11 @@ def load_s_fluxes_from_file(
 
     if month is None:
 
-        file_name = (
-            constants.get_directory()
-            + "/surface_fluxes/Surface_Fluxes_"
-            + location
-            + "_"
-            + interaction_model
-            + "_"
-            + primary_model
-            + ".txt"
-        )
+        file_name = os.path.join(constants.get_directory(), "surface_fluxes", "Surface_Fluxes_{0}_{1}_{2}.txt".format(location, interaction_model, primary_model))
 
     else:
 
-        file_name = (
-            constants.get_directory()
-            + "/surface_fluxes/Surface_Fluxes_"
-            + location
-            + "_"
-            + month
-            + "_"
-            + interaction_model
-            + "_"
-            + primary_model
-            + ".txt"
-        )
+        file_name = os.path.join(constants.get_directory(), "surface_fluxes", "Surface_Fluxes_{0}_{1}_{2}_{3}.txt".format(location, month, interaction_model, primary_model))
 
     # Check if the file exists
 
@@ -343,15 +285,16 @@ def load_s_fluxes_from_file(
         file.close()
 
         # Check that the file has the correct number of energies and zenith angles
-
-        if n_lines == constants.len_ij:
+        
+        if n_lines == len(constants.ENERGIES)*len(angles):
 
             s_fluxes = np.reshape(
                 np.loadtxt(file_name)[:, 2],
-                (len(constants.ENERGIES), len(constants.ANGLES_FOR_S_FLUXES)),
+                (len(constants.ENERGIES), len(angles)),
             )
 
             if constants.get_verbose() > 1:
+                
                 print("Loaded surface fluxes.")
 
             return s_fluxes
@@ -372,9 +315,7 @@ def print_s_fluxes_grids(file_name):
 
     """Return the surface energy grid and zenith angles in a surface fluxes file."""
 
-    file_contents = np.loadtxt(
-        constants.get_directory() + "/surface_fluxes/" + file_name
-    )
+    file_contents = np.loadtxt(os.path.join(constants.get_directory(), "surface_fluxes", file_name))
 
     file_s_energies = np.unique(file_contents[:, 0])
     file_angles = np.unique(file_contents[:, 1])
