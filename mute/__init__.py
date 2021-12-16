@@ -33,6 +33,7 @@ def download_file(url):
 
 # Download the files from GitHub
 
-if not os.path.isfile(os.path.join(os.path.dirname(__file__), "data", "data_20211110.txt")):
-
-    download_file("https://github.com/wjwoodley/mute/releases/download/0.1.0/data_20211110.zip")
+if not os.path.isfile(os.path.join(os.path.dirname(__file__), "data", "data_20211216.txt")):
+    pass
+    
+#     download_file("https://github.com/wjwoodley/mute/releases/download/1.0.0/data_20211216.zip")

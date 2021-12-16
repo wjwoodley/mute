@@ -325,6 +325,12 @@ def calc_survival_probability_tensor(seed=0, file_name = None, n_job = 1, output
     ----------
     seed : int, optional (default: 0)
         The random seed for use in the PROPOSAL propagator.
+    
+    file_name : str, optional
+        The file name pattern that the underground energy data is stored in. This should end in an underscore so the function can append the job array number.
+    
+    n_job : int, optional (default: 1)
+        The number of jobs that were run on the computer cluster. Set this to the number of files the underground energies are spread across.
 
     output : bool, optional (default: taken from constants.get_output())
         If True, an output file will be created to store the results.

@@ -156,7 +156,7 @@ def calc_u_fluxes(
 
                 constants.check_directory(os.path.join(constants.get_directory(), "underground"), force=force)
                 
-                file_name = os.path.join(constants.get_directory, "underground", "{0}_Underground_Fluxes.txt".format(constants.get_lab()))
+                file_name = os.path.join(constants.get_directory(), "underground", "{0}_Underground_Fluxes.txt".format(constants.get_lab()))
                 file_out  = open(file_name, "w")
 
                 for j in range(len(constants.ANGLES)):

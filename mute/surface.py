@@ -88,6 +88,8 @@ def calc_s_fluxes(
         "GSF": (pm.GlobalSplineFitBeta, None),
         "HG": (pm.HillasGaisser2012, "H3a"),
         "GH": (pm.GaisserHonda, None),
+        "ZS": (pm.ZatsepinSokolskaya, "default"),
+        "ZSp": (pm.ZatsepinSokolskaya, "pamela")
     }
 
     assert primary_model in primary_models
