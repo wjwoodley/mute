@@ -7,10 +7,10 @@ The nearly-minimal code below will calculate an array of true vertical undergrou
 ```
 # Import packages
 
+import matplotlib.pyplot as plt
+
 import mute.constants as mtc
 import mute.underground as mtu
-
-import matplotlib.pyplot as plt
 
 # Set the constants
 
@@ -45,7 +45,7 @@ import mute.propagation as mtp
 import mute.underground as mtu
 ```
 
-When MUTE is imported for the first time, the data files supplied with the GitHub release will be downloaded to the directory MUTE is installed to. These data files contain some surface flux matrices for the default models and atmosphere as well as a survival probability tensor for standard rock and a propagation of 100 000 muons.
+When MUTE is imported for the first time, the data files supplied with the GitHub release will be downloaded to the directory MUTE is installed to. These data files contain some surface flux matrices for the default models and atmosphere as well as survival probability tensors for standard rock and water for simulations of 100 000 muons.
 
 ## Changing the Constants
 
@@ -60,12 +60,12 @@ mtc.set_overburden("flat")
 mtc.set_vertical_depth(1)
 mtc.set_medium("rock")
 mtc.set_density(2.65)
-mtc.set_n_muon(1000)
+mtc.set_n_muon(100000)
 ```
 
 The docstrings for each function describe what values they can take.
 
-It is usually best to leave the directory as the default value, which is given by ``os.path.join(os.path.dirname(__file__), "data")``. Data files downloaded automatically from GitHub will be stored where MUTE is installed (the location of this directory can be found by running ``pip show mute``), as will output data files created while using MUTE. The directory can be changed for ease of use on a computing cluster (see the example in [``examples/cluster``](../examples/cluster) or the example at the end of this tutorial).
+It is usually best to leave the directory as the default value. Data files downloaded automatically from GitHub will be stored where MUTE is installed (the location of this directory can be found by running ``pip show mute``), as will output data files created while using MUTE. The directory can be changed for ease of use on a computing cluster (see the example in [``examples/cluster``](../examples/cluster) or the example at the end of this tutorial).
 
 When the vertical depth, h, is set, the values of ``mtc.slant_depths`` and ``mtc.angles`` change according to h = X/cos(θ), where X is the slant depth, and θ is the zenith angle. The default values are stored in ``mtc.SLANT_DEPTHS`` and ``mtc.ANGLES`` respectively. The default slant depths are an array of 23 depths between 1 and 12 km.w.e. going up in steps of 0.5 km.w.e.:
 
@@ -78,8 +78,8 @@ array([ 1. ,  1.5,  2. ,  2.5,  3. ,  3.5,  4. ,  4.5,  5. ,  5.5,  6. ,
 For a lab 3.1 km.w.e. underground (or underwater), the vertical depth can be set with ``mtc.set_vertical_depth(3.1)``. Then, printing ``mtc.slant_depths`` gives:
 
 ```
-array([ 3.5,  4. ,  4.5,  5. ,  5.5,  6. ,  6.5,  7. ,  7.5,  8. ,  8.5,
-        9. ,  9.5, 10. , 10.5, 11. , 11.5, 12. ])
+array([ 3.1,  3.5,  4. ,  4.5,  5. ,  5.5,  6. ,  6.5,  7. ,  7.5,  8. ,
+        8.5,  9. ,  9.5, 10. , 10.5, 11. , 11.5, 12. ])
 ```
 
 The angles in ``mtc.angles`` are set according to these depths as well. MUTE uses the default values to calculate the underground flux matrix, then interpolates to the angles in ``mtc.angles`` (or those specified by the ``angles`` or ``depths`` input parameters in the underground flux or intensity functions).
@@ -106,7 +106,7 @@ mtu.calc_u_intensities(angles = None, location = "USStd", month = None, interact
 
 The values for ``angles`` will be taken from ``mtc.angles``, and the value for ``output`` will be taken from ``mtc.get_output()``.
 
-This will return an array of underground muon intensities for the 23 default angles (or otherwise, depending on the value set for the vertical depth). The angles can be changed by passing angles in degrees (float or array-like) into the function. To return the underground intensities for 100 angles between 0 and 85 degrees, for example, one can do:
+This will return an array of underground muon intensities for the 23 default angles (or otherwise, depending on the value set for the vertical depth; see above). The angles can be changed by passing angles in degrees (float or array-like) into the function. To return the underground intensities for 100 angles between 0 and 85 degrees, for example, one can do:
 
 ```
 angles = np.linspace(0, 85, 100)
@@ -120,10 +120,10 @@ If the surface flux or survival probability matrices that are required to calcul
 
 ### True Vertical Underground Intensities
 
-True vertical underground intensities are calculated with the function ``mtu.calc_u_intensities_tr()``. The input parameters are the same as those for the ``mtu.calc_u_intensities()`` function with the exception of the first parameter, which is ``depths`` instead of ``angles``. The slant depths can be changed by passing slant depths in km.w.e. (float or array-like) into the function. To return the true vertical underground intensities for 20 slant depths between 3 and 10 km.w.e., for example, one can do:
+True vertical underground intensities are calculated with the function ``mtu.calc_u_intensities_tr()``. The input parameters are the same as those for the ``mtu.calc_u_intensities()`` function with the exception of the first parameter, which is ``depths`` instead of ``angles``. The slant depths can be changed by passing slant depths in km.w.e. (float or array-like) into the function. To return the true vertical underground intensities for 40 slant depths between 3 and 10 km.w.e., for example, one can do:
 
 ```
-depths = np.linspace(3, 10, 20)
+depths = np.linspace(3, 10, 40)
 
 mtu.calc_u_intensities_tr(depths)
 ```
@@ -176,7 +176,7 @@ The default hadronic interaction model (which describes the hadronic interaction
 - ``"DPMJET-III-19.1"``
 - ``"SIBYLL-2.3c_pp"``
 
-Note that ``"DDM"`` and ``"SIBYLL-2.3d"`` are only available using the files provided on GitHub; MCEq cannot currently calculate new matrices for these models.
+Note that ``"DDM"`` and ``"SIBYLL-2.3d"`` are only available using the files provided on GitHub for the default primary model ``"GSF"``; MCEq cannot currently calculate new matrices for these models.
 
 To calculate underground intensities for EPOS-LHC, for example, one can do:
 
@@ -184,13 +184,15 @@ To calculate underground intensities for EPOS-LHC, for example, one can do:
 mtu.calc_u_intensities(interaction_model = "EPOS-LHC")
 ```
 
-For more information, see the [MCEq Documentation](https://mceq.readthedocs.io/en/latest/tutorial.html#changing-hadronic-interaction-models). While MCEq will remove the dashes and points, in order for MUTE to find the correct file in memory when calculating the underground fluxes, the dashes, dots, and capitalisation must match exactly what was used when the function was first ran.
+For more information, see the [MCEq Documentation](https://mceq.readthedocs.io/en/latest/tutorial.html#changing-hadronic-interaction-models). While MCEq will remove the dashes and points, in order for MUTE to find the correct file when calculating the underground fluxes, the dashes, dots, and capitalisation must match exactly what was used when the function was first run.
 
-The default primary cosmic ray flux model is ``"GSF"``, for GlobalSplineFitBeta, and is set with the ``primary_model`` keyword argument. The following primary models are available:
+The default primary cosmic ray flux model is ``"GSF"``, for GlobalSplineFitBeta, and is set with the ``primary_model`` keyword argument. The following primary models are available to be set with a string:
 
 - ``"GSF"``: GlobalSplineFitBeta
+- ``"HG"``: HillasGaisser2012 (H3a)
 - ``"GH"``: GaisserHonda
-- ``"HG"``: HillasGaisser2012
+- ``"ZS"``: ZatsepinSokolskaya (Default)
+- ``"ZSP"``: ZatsepinSokolskaya (PAMELA)
 
 To calculate underground intensities for GaisserHonda, for example, one can do:
 
@@ -198,7 +200,15 @@ To calculate underground intensities for GaisserHonda, for example, one can do:
 mtu.calc_u_intensities(primary_model = "GH")
 ```
 
-Other models will be added in the future. For more information, see the [MCEq Documentation](https://mceq.readthedocs.io/en/latest/tutorial.html#changing-cosmic-ray-flux-model).
+Alternatively, the primary model may be set using a tuple. This gives access to the rest of the models available in MCEq. For example:
+
+```
+import crflux.models as pm
+
+mtu.calc_u_intensities(primary_model = (pm.GaisserStanevTilav, "3-gen"))
+```
+
+For more information, see the [MCEq Documentation](https://mceq.readthedocs.io/en/latest/tutorial.html#changing-cosmic-ray-flux-model) and the [crflux Documentation](https://crfluxmodels.readthedocs.io/en/latest/index.html).
 
 ### Vertical-Equivalent Underground Intensities
 
@@ -214,14 +224,19 @@ mtu.calc_u_fluxes(angles = None, location = "USStd", month = None, interaction_m
 
 When calculating underground fluxes and intensities, ``mtu.calc_u_fluxes()`` calls the functions ``mts.load_s_fluxes_from_file()``, which searches for a surface flux file that has a name matching the set atmosphere and models, and ``mtp.load_survival_probability_tensor_from_file()``, which searches for a survival probability file that has a name matching the set global parameters. If it finds the required files, it will load the surface fluxes and / or survival probabilities from those files. If it does not, it will try to calculate new surface flux and / or survival probability matrices.
 
-The ``mtu.calc_u_fluxes()`` function returns a tuple with two elements. The first element is the underground flux matrix for the angles specified by the ``angles`` parameter in the function. The second element of the tuple is the underground flux matrix for 0 degrees. This is used by MUTE to calculate true vertical intensities, but is otherwise unneeded. Therefore, whenever underground fluxes are being calculated, the function should be indexed with ``[0]`` to get the matrix.
+The ``mtu.calc_u_fluxes()`` function returns a tuple with two elements. The first element is the underground flux matrix for the angles specified by the ``angles`` parameter in the function. The second element of the tuple is the underground flux matrix for 0 degrees. This second element is used by MUTE to calculate true vertical intensities, but is otherwise unneeded. Therefore, whenever underground fluxes are being calculated, the function should be indexed with ``[0]`` to get the matrix.
+
+The underground flux matrix is a NumPy array of two axes:
+
+1. Zenith angle
+2. Underground energy
 
 ## Calculating Surface Fluxes
 
-[MCEq](https://github.com/afedynitch/MCEq) is used to calculate surface muon fluxes. Surface flux matrices can be calculated using the ``mts.calc_s_fluxes()`` function, which takes the same arguments as ``mtu.calc_u_intensities()``, described above, with the exception of ``angles`` (the angles used are always the default 45 angles given by ``mtc.ANGLES_FOR_S_FLUXES``). The default call is:
+[MCEq](https://github.com/afedynitch/MCEq) is used to calculate surface muon fluxes. Surface flux matrices can be calculated using the ``mts.calc_s_fluxes()`` function, which takes the same arguments as ``mtu.calc_u_intensities()``, described above, with the exception of ``angles`` (the angles used are always the default 20 equally-spaced angles given by ``mtc.ANGLES_FOR_S_FLUXES``). The default call is:
 
 ```
-mts.calc_s_fluxes(location = "USStd", month = None, interaction_model = "SIBYLL-2.3c", primary_model = "GSF", atmosphere = "CORSIKA", output = None, force = False)
+mts.calc_s_fluxes(location = "USStd", month = None, interaction_model = "SIBYLL-2.3c", primary_model = "GSF", atmosphere = "CORSIKA", output = None, force = False, test = False)
 ```
 
 To calculate surface fluxes for Gran Sasso in January using the HillasGaisser2012 primary flux model, for example, one can do:
@@ -230,29 +245,39 @@ To calculate surface fluxes for Gran Sasso in January using the HillasGaisser201
 mts.calc_s_fluxes(location = "SanGrasso", month = "January", primary_model = "HG", atmosphere = "MSIS00")
 ```
 
-MCEq may return negative fluxes for the highest (EeV-scale) energies, but the incredibly small orders of magnitude of these fluxes makes a negligible difference in any results.
+The surface energy grid used throughout MUTE (``mtc.energies``) is the energy grid provided by MCEq, but with energies beyond 100 PeV cut, as the surface flux for energies higher than this is negligible for depths up to 12 km.w.e.
+
+The surface flux matrix is a NumPy array of two axes:
+
+1. Surface energy
+2. Zenith angle
 
 ## Calculating Survival Probabilities
 
 The main functions in ``mute.propagation`` used for the propagation of muons through matter and the calculation of survival probability tensors are:
 
 1. ``propagate_muons(seed = 0, job_array_number = 0, output = None, force = False)``
-2. ``load_u_energies_from_files(n_job = 1, force = False)``
-3. ``calc_survival_probability_tensor(seed = 0, output = None, force = False)``
+2. ``calc_survival_probability_tensor(seed = 0, file_name = None, n_job = 1, output = None, force = False)``
 
-For general purposes, the third function can be used. It will check if underground (or underwater, etc.) muon energies for the set global constants already exist. If they do, it will load them and calculate survival probabilities. If they do not, it will call ``mtp.propagate_muons()``, which begins the Monte Carlo simulation using [PROPOSAL](https://github.com/tudo-astroparticlephysics/PROPOSAL).
+For general purposes, the second function can be used. It will check if underground (or underwater, etc.) muon energies for the set global constants have been specified or already exist. If they do, it will load them and calculate survival probabilities. If they do not, it will call ``mtp.propagate_muons()``, which begins the Monte Carlo simulation using [PROPOSAL](https://github.com/tudo-astroparticlephysics/PROPOSAL).
+
+The survival probability tensor is a NumPy array of three axes:
+
+1. Surface energy
+2. Slant depth
+3. Underground energy
 
 ### Using MUTE on a Computing Cluster
 
-For high statistics simulations on a computing cluster, the first function is the most useful. The MUTE code to set up a job array of Monte Carlo simulations for 1000 muons per energy-slant depth bin (per job) can be written as follows:
+For high statistics simulations on a computing cluster, the first function above is the most useful. The MUTE code to set up a job array of Monte Carlo simulations for 1000 muons per energy-slant depth bin (per job) can be written as follows:
 
 ```
 # Import packages
 
+import argparse
+
 import mute.constants as mtc
 import mute.propagation as mtp
-
-import argparse
 
 # Parse the job array number from the command line
 
@@ -275,17 +300,17 @@ mtp.propagate_muons(seed = args.a, job_array_number = args.a, force = True)
 
 To prevent any unnecessary output, the verbosity can be set to ``0`` (though it might be a good idea to keep it at the default ``2`` to help figure out what went wrong if the job fails). To make it easier to access and ``sftp`` out the output Monte Carlo underground energy files, the directory can be changed to the working directory of the code or elsewhere. The ``force`` parameter in ``mtc.propagate_muons()`` should be set to ``True`` to force the creation of any required directories or files so the program does not hang, waiting for input until the job times out.
 
-The job array number can be read in from the command line using ``argparse`` and the seed can be changed in the propagation function to ensure the Monte Carlo results are different for each job. If the job array consisted of 100 jobs, the survival probabilities can then be calculated as below, setting the ``n_job`` input parameter to ``100``:
+The seed, which can be changed in the propagation function to ensure the Monte Carlo results are different for each job, and the job array number can be both read in from the command line using ``argparse``. If the job array consisted of 100 jobs, the survival probabilities can then be calculated as below, setting the ``n_job`` input parameter to ``100``:
 
 ```
 import mute.constants as mtc
 import mute.propagation as mtp
 
 mtc.set_lab("Example")
-mtc.set_n_muon(1000)
+mtc.set_n_muon(100000)
 
 mtp.load_u_energies_from_files(n_job = 100)
 mtp.calc_survival_probability_tensor()
 ```
 
-Here, ``seed`` does not need to be set in ``mtp.calc_survival_probability_tensor()`` because this function will not invoke ``mtp.propagate_muons()``, since the underground energies have already been loaded.
+Here, ``seed`` does not need to be set in ``mtp.calc_survival_probability_tensor()`` because this function will not invoke ``mtp.propagate_muons()``, since the underground energies have already been loaded. Note also that the number of muons was set to 1000 when running the propagation, but is set to 100000 in the code just above. By setting ``n_job`` to 100, MUTE will recognise that the 100000 muons were split evenly between 100 jobs of 1000 muons each, and will search for underground energy files corresponding to 1000 muons.

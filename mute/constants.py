@@ -3,7 +3,7 @@
 ###                    ###
 ###  MUTE              ###
 ###  William Woodley   ###
-###  10 November 2021  ###
+###  19 December 2021  ###
 ###                    ###
 ##########################
 ##########################
@@ -16,7 +16,7 @@ import numpy as np
 
 # Energies in [MeV]
 
-E_BINS = np.logspace(1.9, 14, 122)  # Bin edges
+E_BINS = np.logspace(1.9, 14, 122)[:-30]  # Bin edges
 E_WIDTHS = np.diff(E_BINS)  # Bin widths
 ENERGIES = np.sqrt(E_BINS[1:] * E_BINS[:-1])  # Bin centers
 
@@ -36,12 +36,12 @@ angles = ANGLES
 
 # Angles in [degrees] specifically for the calculation of surface flux matrices
 
-ANGLES_FOR_S_FLUXES = np.degrees(np.arccos(1 / np.linspace(1, 12, 45)))
+ANGLES_FOR_S_FLUXES = np.linspace(0, 90, 20)
 
 # Length values for file comparisons
 
 len_ij = len(ENERGIES) * len(ANGLES_FOR_S_FLUXES)
-len_iju = len(ENERGIES) * len(ANGLES) * len(ENERGIES)
+len_iju = len(ENERGIES) * len(SLANT_DEPTHS) * len(ENERGIES)
 
 # The rest mass of a muon in [MeV]
 
@@ -57,7 +57,7 @@ _overburden = "flat"
 _vertical_depth = 1
 _medium = "rock"
 _density = 2.65
-_n_muon = 1000
+_n_muon = 100000
 
 # Setters and getters for global constants
 
@@ -124,9 +124,18 @@ def set_directory(directory):
 
     """Set the working directory for files to be written to and read from. The default is \"data\"."""
 
+    from .__init__ import download_file
+
     global _directory
 
     _directory = directory
+
+    if not os.path.isfile(os.path.join(_directory, "data_20211219.txt")):
+
+        download_file(
+            "https://github.com/wjwoodley/mute/releases/download/0.1.0/data_20211219.zip",
+            _directory,
+        )
 
 
 def get_directory():
@@ -190,11 +199,22 @@ def set_vertical_depth(vertical_depth):
     global slant_depths
     global angles
 
+    assert (
+        vertical_depth >= 1
+    ), "Vertical depths less than 1 km.w.e. are not currently supported."
+    assert (
+        vertical_depth <= 12
+    ), "Vertical depths greater than 12 km.w.e. are not currenlty supported."
+
     _vertical_depth = vertical_depth
 
     # Use the set vertical depth to calculate new slant depths and zenith angles
 
-    slant_depths = SLANT_DEPTHS[SLANT_DEPTHS >= _vertical_depth]
+    slant_depths = np.sort(
+        np.concatenate(
+            ([_vertical_depth], SLANT_DEPTHS[SLANT_DEPTHS > _vertical_depth])
+        )
+    )
     angles = np.degrees(np.arccos(_vertical_depth / slant_depths))
 
 
@@ -216,7 +236,8 @@ def set_medium(medium):
         "rock",
         "water",
         "ice",
-    ], 'medium must be set to "rock", "water", or "ice".'
+        "air",
+    ], 'medium must be set to "rock", "water", "ice", or "air".'
 
     global _medium
 
@@ -495,7 +516,7 @@ def clear():
     _vertical_depth = 1
     _medium = "rock"
     _density = 2.65
-    _n_muon = 1000
+    _n_muon = 100000
 
     # Global weight variables
     # Set the variables to None first, in case they do not already exist
@@ -538,7 +559,7 @@ def clear():
     global len_iju
     global MU_MASS
 
-    E_BINS = np.logspace(1.9, 14, 122)  # [MeV]
+    E_BINS = np.logspace(1.9, 14, 122)[:-30]  # [MeV]
     E_WIDTHS = np.diff(E_BINS)  # [MeV]
     ENERGIES = np.sqrt(E_BINS[1:] * E_BINS[:-1])  # [MeV]
     e_bins = E_BINS  # [MeV]
@@ -548,9 +569,9 @@ def clear():
     ANGLES = np.degrees(np.arccos(1 / SLANT_DEPTHS))  # [degrees]
     slant_depths = SLANT_DEPTHS  # [km.w.e.]
     angles = ANGLES  # [degrees]
-    ANGLES_FOR_S_FLUXES = np.degrees(np.arccos(1 / np.linspace(1, 12, 45)))  # [degrees]
+    ANGLES_FOR_S_FLUXES = np.linspace(0, 90, 20)  # [degrees]
     len_ij = len(ENERGIES) * len(ANGLES_FOR_S_FLUXES)
-    len_iju = len(ENERGIES) * len(ANGLES) * len(ENERGIES)
+    len_iju = len(ENERGIES) * len(SLANT_DEPTHS) * len(ENERGIES)
     MU_MASS = 105.6583745  # [MeV]
 
     gc.collect()
