@@ -3,7 +3,7 @@
 ###                    ###
 ###  MUTE              ###
 ###  William Woodley   ###
-###  23 November 2021  ###
+###  19 December 2021  ###
 ###                    ###
 ##########################
 ##########################
@@ -29,10 +29,10 @@ energies = ENERGIES
 # The user can enter their own angles in the function calls, which will interpolate over the grids created by these angles
 
 SLANT_DEPTHS = np.linspace(1, 12, 23)
-ANGLES       = np.degrees(np.arccos(1 / SLANT_DEPTHS))
+ANGLES = np.degrees(np.arccos(1 / SLANT_DEPTHS))
 
 slant_depths = SLANT_DEPTHS
-angles       = ANGLES
+angles = ANGLES
 
 # Angles in [degrees] specifically for the calculation of surface flux matrices
 
@@ -41,7 +41,7 @@ ANGLES_FOR_S_FLUXES = np.linspace(0, 90, 20)
 # Length values for file comparisons
 
 len_ij = len(ENERGIES) * len(ANGLES_FOR_S_FLUXES)
-len_iju = len(ENERGIES) * len(ANGLES) * len(ENERGIES)
+len_iju = len(ENERGIES) * len(SLANT_DEPTHS) * len(ENERGIES)
 
 # The rest mass of a muon in [MeV]
 
@@ -124,9 +124,18 @@ def set_directory(directory):
 
     """Set the working directory for files to be written to and read from. The default is \"data\"."""
 
+    from .__init__ import download_file
+
     global _directory
 
     _directory = directory
+
+    if not os.path.isfile(os.path.join(_directory, "data_20211219.txt")):
+
+        download_file(
+            "https://github.com/wjwoodley/mute/releases/download/0.1.0/data_20211219.zip",
+            _directory,
+        )
 
 
 def get_directory():
@@ -190,18 +199,22 @@ def set_vertical_depth(vertical_depth):
     global slant_depths
     global angles
 
+    assert (
+        vertical_depth >= 1
+    ), "Vertical depths less than 1 km.w.e. are not currently supported."
+    assert (
+        vertical_depth <= 12
+    ), "Vertical depths greater than 12 km.w.e. are not currenlty supported."
+
     _vertical_depth = vertical_depth
 
     # Use the set vertical depth to calculate new slant depths and zenith angles
-    
-    if _vertical_depth not in slant_depths:
-        
-        slant_depths = np.sort(np.concatenate(([_vertical_depth], SLANT_DEPTHS[SLANT_DEPTHS >= _vertical_depth])))
-    
-    else:
-        
-        slant_depths = SLANT_DEPTHS[SLANT_DEPTHS >= _vertical_depth]
-    
+
+    slant_depths = np.sort(
+        np.concatenate(
+            ([_vertical_depth], SLANT_DEPTHS[SLANT_DEPTHS > _vertical_depth])
+        )
+    )
     angles = np.degrees(np.arccos(_vertical_depth / slant_depths))
 
 
@@ -223,7 +236,8 @@ def set_medium(medium):
         "rock",
         "water",
         "ice",
-    ], 'medium must be set to "rock", "water", or "ice".'
+        "air",
+    ], 'medium must be set to "rock", "water", "ice", or "air".'
 
     global _medium
 
@@ -557,7 +571,7 @@ def clear():
     angles = ANGLES  # [degrees]
     ANGLES_FOR_S_FLUXES = np.linspace(0, 90, 20)  # [degrees]
     len_ij = len(ENERGIES) * len(ANGLES_FOR_S_FLUXES)
-    len_iju = len(ENERGIES) * len(ANGLES) * len(ENERGIES)
+    len_iju = len(ENERGIES) * len(SLANT_DEPTHS) * len(ENERGIES)
     MU_MASS = 105.6583745  # [MeV]
 
     gc.collect()

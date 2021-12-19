@@ -3,7 +3,7 @@
 ###                    ###
 ###  MUTE              ###
 ###  William Woodley   ###
-###  23 November 2021  ###
+###  19 December 2021  ###
 ###                    ###
 ##########################
 ##########################
@@ -52,11 +52,14 @@ def calc_u_fluxes(
     interaction_model: str, optional (default: "SIBYLL-2.3c")
         The hadronic interaction model to use in MCEq. See the Tutorial or MCEq documentation for a list of options.
 
-    primary_model : {"GSF", "HG", "GH"}, optional (default: "GSF")
+    primary_model : str in {"GSF", "HG", "GH", "ZS", "ZSP"} or tuple, optional (default: "GSF")
         The primary flux model to use in MCEq. Options:
         GSF = GlobalSplineFitBeta
-        HG  = HillasGaisser2012
+        HG  = HillasGaisser2012 (H3a)
         GH  = GaisserHonda
+        ZS  = Zatsepin-Sokolskaya (Default)
+        ZSP = Zatsepin-Sokolskaya (PAMELA)
+        Alternatively, this can be set with a tuple. For example: (pm.GaisserStanevTilav, "3-gen")
 
     atmosphere : {"CORSIKA", "MSIS00"}, optional (default: "CORSIKA")
         The atmospheric model. For US Standard Atmosphere, use "CORSIKA". For seasonal variations, use "MSIS00".
@@ -89,7 +92,9 @@ def calc_u_fluxes(
     if constants.get_verbose() > 1:
         print("Calculating underground fluxes.")
 
-    s_fluxes = surface.load_s_fluxes_from_file(location, month, interaction_model, primary_model, atmosphere, force=force)
+    s_fluxes = surface.load_s_fluxes_from_file(
+        location, month, interaction_model, primary_model, atmosphere, force=force
+    )
     survival = propagation.load_survival_probability_tensor_from_file(force=force)
 
     if (s_fluxes is None or survival is None) and constants.get_verbose() > 1:
@@ -99,26 +104,52 @@ def calc_u_fluxes(
         return
 
     # Interpolate the matrices
-    
-    interp_at_angles = np.linspace(np.min(constants.angles), np.max(constants.angles), 300)
-    interp_s_fluxes  = scii.interp1d(constants.ANGLES_FOR_S_FLUXES, s_fluxes, axis = 1, kind = "cubic")(interp_at_angles)
-    interp_s_fluxes  = scii.RectBivariateSpline(constants.ENERGIES, interp_at_angles, interp_s_fluxes)(constants.ENERGIES, constants.angles)
-    
-    interp_survival  = scii.interp1d(constants.SLANT_DEPTHS, survival, axis = 1, kind = "cubic")(constants.slant_depths)
-    
+
+    interp_at_angles = np.linspace(
+        np.min(constants.angles), np.max(constants.angles), 300
+    )
+    interp_s_fluxes = scii.interp1d(
+        constants.ANGLES_FOR_S_FLUXES, s_fluxes, axis=1, kind="cubic"
+    )(interp_at_angles)
+    interp_s_fluxes = scii.RectBivariateSpline(
+        constants.ENERGIES, interp_at_angles, interp_s_fluxes
+    )(constants.ENERGIES, constants.angles)
+
+    interp_survival = scii.interp1d(
+        constants.SLANT_DEPTHS, survival, axis=1, kind="cubic"
+    )(constants.slant_depths)
+
     # Reshape the matrices
 
-    interp_s_fluxes = np.nan_to_num(np.reshape(interp_s_fluxes, (len(constants.ENERGIES), len(constants.angles))))
-    interp_survival = np.nan_to_num(np.reshape(interp_survival, (len(constants.ENERGIES), len(constants.slant_depths), len(constants.ENERGIES))))
+    interp_s_fluxes = np.nan_to_num(
+        np.reshape(interp_s_fluxes, (len(constants.ENERGIES), len(constants.angles)))
+    )
+    interp_survival = np.nan_to_num(
+        np.reshape(
+            interp_survival,
+            (
+                len(constants.ENERGIES),
+                len(constants.slant_depths),
+                len(constants.ENERGIES),
+            ),
+        )
+    )
 
     # Calculate the underground fluxes for a flat overburden
 
     if constants.get_overburden() == "flat":
 
         # Initialise the underground flux matrices
+        # First index  = Surface energy
+        # Second index = Zenith angle
+        # Third index  = Underground energy
 
-        u_fluxes    = np.zeros((len(constants.ENERGIES), len(constants.angles), len(constants.ENERGIES)))
-        u_fluxes_tr = np.zeros((len(constants.ENERGIES), len(constants.angles), len(constants.ENERGIES)))
+        u_fluxes = np.zeros(
+            (len(constants.ENERGIES), len(constants.angles), len(constants.ENERGIES))
+        )
+        u_fluxes_tr = np.zeros(
+            (len(constants.ENERGIES), len(constants.angles), len(constants.ENERGIES))
+        )
 
         # Calculate the underground fluxes
 
@@ -128,72 +159,107 @@ def calc_u_fluxes(
 
                 for u in range(len(constants.ENERGIES)):
 
-                    u_fluxes[i, j, u]    = interp_survival[i, j, u]*interp_s_fluxes[i, j]*(constants.E_WIDTHS[i]/constants.E_WIDTHS[u])
-                    u_fluxes_tr[i, j, u] = interp_survival[i, j, u]*interp_s_fluxes[i, 0]*(constants.E_WIDTHS[i]/constants.E_WIDTHS[u])
+                    u_fluxes[i, j, u] = (
+                        interp_survival[i, j, u]
+                        * interp_s_fluxes[i, j]
+                        * (constants.E_WIDTHS[i] / constants.E_WIDTHS[u])
+                    )
+                    u_fluxes_tr[i, j, u] = (
+                        interp_survival[i, j, u]
+                        * interp_s_fluxes[i, 0]
+                        * (constants.E_WIDTHS[i] / constants.E_WIDTHS[u])
+                    )
 
         # Sum over the surface energy grid axis
+        # This reduces the number of axes down to two
+        # First index = Zenith angle
+        # Second index  = Underground energy
 
-        u_fluxes    = np.sum(u_fluxes, axis = 0)
-        u_fluxes_tr = np.sum(u_fluxes_tr, axis = 0)
+        u_fluxes = np.sum(u_fluxes, axis=0)
+        u_fluxes_tr = np.sum(u_fluxes_tr, axis=0)
 
         # Set the angles to default values
         # If user has input singular angle, turn into an array
 
-        if angles is None: angles = constants.angles
+        if angles is None:
+            angles = constants.angles
 
         angles = np.atleast_1d(angles)
 
         # If the user has not specified angles, return the whole matrix with no interpolation
         # Check to make sure both arrays have the same number of values, and that those values are equal at each index
 
-        if len(angles) == len(constants.ANGLES) and np.allclose(angles, constants.ANGLES):
+        if len(angles) == len(constants.ANGLES) and np.allclose(
+            angles, constants.ANGLES
+        ):
 
-            if constants.get_verbose() > 1: print("Finished calculating underground fluxes.")
+            if constants.get_verbose() > 1:
+                print("Finished calculating underground fluxes.")
 
             # Write the results to the file
 
             if output:
 
-                constants.check_directory(os.path.join(constants.get_directory(), "underground"), force=force)
-                
-                file_name = os.path.join(constants.get_directory(), "underground", "{0}_Underground_Fluxes.txt".format(constants.get_lab()))
-                file_out  = open(file_name, "w")
+                constants.check_directory(
+                    os.path.join(constants.get_directory(), "underground"), force=force
+                )
+
+                file_name = os.path.join(
+                    constants.get_directory(),
+                    "underground",
+                    "{0}_Underground_Fluxes.txt".format(constants.get_lab()),
+                )
+                file_out = open(file_name, "w")
 
                 for j in range(len(constants.ANGLES)):
 
                     for u in range(len(constants.ENERGIES)):
 
-                        file_out.write("{0:1.5f} {1:1.14f} {2:1.14e}\n".format(angles[j], constants.ENERGIES[u], u_fluxes[j, u]))
+                        file_out.write(
+                            "{0:1.5f} {1:1.14f} {2:1.14e}\n".format(
+                                angles[j], constants.ENERGIES[u], u_fluxes[j, u]
+                            )
+                        )
 
                 file_out.close()
 
-                if constants.get_verbose() > 1: print("Underground fluxes written to " + file_name + ".")
+                if constants.get_verbose() > 1:
+                    print("Underground fluxes written to " + file_name + ".")
 
             return u_fluxes, u_fluxes_tr
 
         else:
 
-            # Construct matrices of combinations of energy and angle values for use in interpolation
-
-            comb_ju = np.array(np.meshgrid(angles, np.log(constants.ENERGIES))).T.reshape(-1, 2)
-
             # Interpolate at the angles the user has requested
 
-            old_err_settings = np.seterr(all = "ignore")
-
-            interp_u_fluxes    = np.exp(scii.interpn((constants.angles, np.log(constants.ENERGIES)), np.log(u_fluxes), comb_ju))
-            interp_u_fluxes_tr = np.exp(scii.interpn((constants.angles, np.log(constants.ENERGIES)), np.log(u_fluxes_tr), comb_ju))
-            
-            np.seterr(**old_err_settings)
+            interp_at_angles = np.linspace(
+                np.min(constants.angles), np.max(constants.angles), 300
+            )
+            interp_u_fluxes = scii.interp1d(
+                constants.angles, u_fluxes, axis=0, kind="cubic"
+            )(interp_at_angles)
+            interp_u_fluxes = scii.RectBivariateSpline(
+                interp_at_angles, constants.ENERGIES, interp_u_fluxes
+            )(angles, constants.ENERGIES)
+            interp_u_fluxes_tr = scii.interp1d(
+                constants.angles, u_fluxes_tr, axis=0, kind="cubic"
+            )(interp_at_angles)
+            interp_u_fluxes_tr = scii.RectBivariateSpline(
+                interp_at_angles, constants.ENERGIES, interp_u_fluxes_tr
+            )(angles, constants.ENERGIES)
 
             # Reshape into a matrix of zeroth dimension len(angles)
 
-            interp_u_fluxes    = np.nan_to_num(np.reshape(interp_u_fluxes, (len(angles), len(constants.ENERGIES))))
-            interp_u_fluxes_tr = np.nan_to_num(np.reshape(interp_u_fluxes_tr, (len(angles), len(constants.ENERGIES))))
+            interp_u_fluxes = np.nan_to_num(
+                np.reshape(interp_u_fluxes, (len(angles), len(constants.ENERGIES)))
+            )
+            interp_u_fluxes_tr = np.nan_to_num(
+                np.reshape(interp_u_fluxes_tr, (len(angles), len(constants.ENERGIES)))
+            )
 
             # Set the global variables
 
-            u_fluxes    = interp_u_fluxes
+            u_fluxes = interp_u_fluxes
             u_fluxes_tr = interp_u_fluxes_tr
 
             if constants.get_verbose() > 1:
@@ -203,10 +269,16 @@ def calc_u_fluxes(
 
             if output:
 
-                constants.check_directory(os.path.join(constants.get_directory(), "underground"), force=force)
+                constants.check_directory(
+                    os.path.join(constants.get_directory(), "underground"), force=force
+                )
 
-                file_name = os.path.join(constants.get_directory(), "underground", "{0}_Underground_Fluxes.txt".format(constants.get_lab()))
-                
+                file_name = os.path.join(
+                    constants.get_directory(),
+                    "underground",
+                    "{0}_Underground_Fluxes.txt".format(constants.get_lab()),
+                )
+
                 file_out = open(file_name, "w")
 
                 for j in range(len(angles)):
@@ -328,11 +400,14 @@ def calc_u_intensities(
     interaction_model: str, optional (default: "SIBYLL-2.3c")
         The hadronic interaction model to use in MCEq. See the Tutorial or MCEq documentation for a list of options.
 
-    primary_model : {"GSF", "HG", "GH"}, optional (default: "GSF")
+    primary_model : str in {"GSF", "HG", "GH", "ZS", "ZSP"} or tuple, optional (default: "GSF")
         The primary flux model to use in MCEq. Options:
         GSF = GlobalSplineFitBeta
-        HG  = HillasGaisser2012
+        HG  = HillasGaisser2012 (H3a)
         GH  = GaisserHonda
+        ZS  = Zatsepin-Sokolskaya (Default)
+        ZSP = Zatsepin-Sokolskaya (PAMELA)
+        Alternatively, this can be set with a tuple. For example: (pm.GaisserStanevTilav, "3-gen")
 
     atmosphere : {"CORSIKA", "MSIS00"}, optional (default: "CORSIKA")
         The atmospheric model. For US Standard Atmosphere, use "CORSIKA". For seasonal variations, use "MSIS00".
@@ -407,10 +482,16 @@ def calc_u_intensities(
 
         if output:
 
-            constants.check_directory(os.path.join(constants.get_directory(), "underground"), force=force)
+            constants.check_directory(
+                os.path.join(constants.get_directory(), "underground"), force=force
+            )
 
-            file_name = os.path.join(constants.get_directory(), "underground", "{0}_Underground_Intensities.txt".format(constants.get_lab()))
-            
+            file_name = os.path.join(
+                constants.get_directory(),
+                "underground",
+                "{0}_Underground_Intensities.txt".format(constants.get_lab()),
+            )
+
             file_out = open(file_name, "w")
 
             for j in range(len(angles)):
@@ -478,11 +559,14 @@ def calc_u_intensities_tr(
     interaction_model: str, optional (default: "SIBYLL-2.3c")
         The hadronic interaction model to use in MCEq. See the Tutorial or MCEq documentation for a list of options.
 
-    primary_model : {"GSF", "HG", "GH"}, optional (default: "GSF")
+    primary_model : str in {"GSF", "HG", "GH", "ZS", "ZSP"} or tuple, optional (default: "GSF")
         The primary flux model to use in MCEq. Options:
         GSF = GlobalSplineFitBeta
-        HG  = HillasGaisser2012
+        HG  = HillasGaisser2012 (H3a)
         GH  = GaisserHonda
+        ZS  = Zatsepin-Sokolskaya (Default)
+        ZSP = Zatsepin-Sokolskaya (PAMELA)
+        Alternatively, this can be set with a tuple. For example: (pm.GaisserStanevTilav, "3-gen")
 
     atmosphere : {"CORSIKA", "MSIS00"}, optional (default: "CORSIKA")
         The atmospheric model. For US Standard Atmosphere, use "CORSIKA". For seasonal variations, use "MSIS00".
@@ -503,15 +587,19 @@ def calc_u_intensities_tr(
 
     if output is None:
         output = constants.get_output()
+    if depths is None:
+        depths = constants.slant_depths
+
+    depths = np.atleast_1d(depths)
+
+    assert all(
+        depths >= np.min(constants.slant_depths)
+    ), "Cannot calculate for depths lower than the set vertical depth."
+    assert all(depths <= 12), "Cannot calculate for depths greater than 12 km.w.e."
 
     # Calculate the true vertical underground intensities for a flat overburden
 
     if constants.get_overburden() == "flat":
-
-        # Set the default depths to be those defined by the set vertical depth
-
-        if depths is None:
-            depths = constants.slant_depths
 
         # Calculate the underground fluxes
 
@@ -535,9 +623,6 @@ def calc_u_intensities_tr(
         u_fluxes_tr = u_fluxes[1]
 
         # Initialise the underground intensity arrays
-        # If user has input singular slant depth, turn into an array
-
-        depths = np.atleast_1d(depths)
 
         u_intensities_tr = np.zeros(len(depths))
 
@@ -557,10 +642,16 @@ def calc_u_intensities_tr(
 
         if output:
 
-            constants.check_directory(os.path.join(constants.get_directory(), "underground"), force=force)
+            constants.check_directory(
+                os.path.join(constants.get_directory(), "underground"), force=force
+            )
 
-            file_name = os.path.join(constants.get_directory(), "underground", "{0}_Underground_Intensities_TR.txt".format(constants.get_lab()))
-            
+            file_name = os.path.join(
+                constants.get_directory(),
+                "underground",
+                "{0}_Underground_Intensities_TR.txt".format(constants.get_lab()),
+            )
+
             file_out = open(file_name, "w")
 
             for x in range(len(depths)):
@@ -633,11 +724,14 @@ def calc_u_intensities_eq(
     interaction_model: str, optional (default: "SIBYLL-2.3c")
         The hadronic interaction model to use in MCEq. See the Tutorial or MCEq documentation for a list of options.
 
-    primary_model : {"GSF", "HG", "GH"}, optional (default: "GSF")
+    primary_model : str in {"GSF", "HG", "GH", "ZS", "ZSP"} or tuple, optional (default: "GSF")
         The primary flux model to use in MCEq. Options:
         GSF = GlobalSplineFitBeta
-        HG  = HillasGaisser2012
+        HG  = HillasGaisser2012 (H3a)
         GH  = GaisserHonda
+        ZS  = Zatsepin-Sokolskaya (Default)
+        ZSP = Zatsepin-Sokolskaya (PAMELA)
+        Alternatively, this can be set with a tuple. For example: (pm.GaisserStanevTilav, "3-gen")
 
     atmosphere : {"CORSIKA", "MSIS00"}, optional (default: "CORSIKA")
         The atmospheric model. For US Standard Atmosphere, use "CORSIKA". For seasonal variations, use "MSIS00".
@@ -704,7 +798,9 @@ def calc_u_intensities_eq(
 
         for j in range(len(angles)):
 
-            u_intensities_eq[j] = scii.simpson(u_fluxes[j, :], constants.ENERGIES) * np.cos(np.radians(angles[j]))
+            u_intensities_eq[j] = scii.simpson(
+                u_fluxes[j, :], constants.ENERGIES
+            ) * np.cos(np.radians(angles[j]))
 
         if constants.get_verbose() > 1:
 
@@ -714,10 +810,16 @@ def calc_u_intensities_eq(
 
         if output:
 
-            constants.check_directory(os.path.join(constants.get_directory(), "underground"), force=force)
+            constants.check_directory(
+                os.path.join(constants.get_directory(), "underground"), force=force
+            )
 
-            file_name = os.path.join(constants.get_directory(), "underground", "{0}_Underground_Intensities_EQ.txt".format(constants.get_lab()))
-            
+            file_name = os.path.join(
+                constants.get_directory(),
+                "underground",
+                "{0}_Underground_Intensities_EQ.txt".format(constants.get_lab()),
+            )
+
             file_out = open(file_name, "w")
 
             for j in range(len(angles)):
@@ -789,11 +891,14 @@ def calc_u_tot_flux(
     interaction_model: str, optional (default: "SIBYLL-2.3c")
         The hadronic interaction model to use in MCEq. See the Tutorial or MCEq documentation for a list of options.
 
-    primary_model : {"GSF", "HG", "GH"}, optional (default: "GSF")
+    primary_model : str in {"GSF", "HG", "GH", "ZS", "ZSP"} or tuple, optional (default: "GSF")
         The primary flux model to use in MCEq. Options:
         GSF = GlobalSplineFitBeta
-        HG  = HillasGaisser2012
+        HG  = HillasGaisser2012 (H3a)
         GH  = GaisserHonda
+        ZS  = Zatsepin-Sokolskaya (Default)
+        ZSP = Zatsepin-Sokolskaya (PAMELA)
+        Alternatively, this can be set with a tuple. For example: (pm.GaisserStanevTilav, "3-gen")
 
     atmosphere : {"CORSIKA", "MSIS00"}, optional (default: "CORSIKA")
         The atmospheric model. For US Standard Atmosphere, use "CORSIKA". For seasonal variations, use "MSIS00".
@@ -846,7 +951,11 @@ def calc_u_tot_flux(
         # Therefore, integrate backwards, using [::-1] on the integrand and steps
         # Otherwise, the answer will be negative
 
-        u_tot_flux = 2 * np.pi * scii.simpson(u_intensities[::-1], np.cos(np.radians(angles[::-1])))
+        u_tot_flux = (
+            2
+            * np.pi
+            * scii.simpson(u_intensities[::-1], np.cos(np.radians(angles[::-1])))
+        )
 
     # Calculate the total underground flux for a non-flat overburden
 

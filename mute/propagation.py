@@ -3,7 +3,7 @@
 ###                    ###
 ###  MUTE              ###
 ###  William Woodley   ###
-###  23 November 2021  ###
+###  19 December 2021  ###
 ###                    ###
 ##########################
 ##########################
@@ -61,6 +61,10 @@ def _create_propagator(force):
     elif constants.get_medium() == "ice":
 
         medium = pp.medium.Ice()
+
+    elif constants.get_medium() == "air":
+
+        medium = pp.medium.Air()
 
     else:
 
@@ -161,7 +165,10 @@ def _propagation_loop(energy, slant_depth, force):
         # If it does, record its energy
         # If it does not, ignore this muon and proceed with the next loop iteration
 
-        if (track.track_energies()[-1] != constants.MU_MASS and track.track_types()[-1] != pp.particle.Interaction_Type.decay):
+        if (
+            track.track_energies()[-1] != constants.MU_MASS
+            and track.track_types()[-1] != pp.particle.Interaction_Type.decay
+        ):
 
             # Store the final underground energy of the muon
 
@@ -221,29 +228,59 @@ def propagate_muons(seed=0, job_array_number=0, output=None, force=False):
 
     # Initialise the matrix of underground energies
 
-    u_energies = np.zeros((len(constants.ENERGIES), len(constants.SLANT_DEPTHS)), dtype=np.ndarray)
+    u_energies = np.zeros(
+        (len(constants.ENERGIES), len(constants.SLANT_DEPTHS)), dtype=np.ndarray
+    )
 
     # Run the propagation function and print the underground energies
 
-    if constants.get_verbose() >= 1: print("Propagating " + str(constants.get_n_muon()* len(constants.ENERGIES)* len(constants.SLANT_DEPTHS)) + " muons.")
+    if constants.get_verbose() >= 1:
+        print(
+            "Propagating "
+            + str(
+                constants.get_n_muon()
+                * len(constants.ENERGIES)
+                * len(constants.SLANT_DEPTHS)
+            )
+            + " muons."
+        )
 
-    for i in (tqdm(range(len(constants.ENERGIES))) if constants.get_verbose() >= 1 else range(len(constants.ENERGIES))):
+    for i in (
+        tqdm(range(len(constants.ENERGIES)))
+        if constants.get_verbose() >= 1
+        else range(len(constants.ENERGIES))
+    ):
 
         for x in range(len(constants.SLANT_DEPTHS)):
 
-            u_energies[i, x] = _propagation_loop(constants.ENERGIES[i], constants.SLANT_DEPTHS[x], force=force)
+            u_energies[i, x] = _propagation_loop(
+                constants.ENERGIES[i], constants.SLANT_DEPTHS[x], force=force
+            )
 
-    if constants.get_verbose() >= 1: print("Finished propagation.")
+    if constants.get_verbose() >= 1:
+        print("Finished propagation.")
 
     if output:
-        
-        constants.check_directory(os.path.join(constants.get_directory(), "underground_energies"), force=force)
-        
-        file_name = os.path.join(constants.get_directory(), "underground_energies", "{0}_{1}_{2}_Underground_Energies_{3}.npy".format(constants.get_medium(), constants.get_density(), constants.get_n_muon(), job_array_number))
-        
+
+        constants.check_directory(
+            os.path.join(constants.get_directory(), "underground_energies"), force=force
+        )
+
+        file_name = os.path.join(
+            constants.get_directory(),
+            "underground_energies",
+            "{0}_{1}_{2}_Underground_Energies_{3}.npy".format(
+                constants.get_medium(),
+                constants.get_density(),
+                constants.get_n_muon(),
+                job_array_number,
+            ),
+        )
+
         np.save(file_name, u_energies)
 
-        if constants.get_verbose() > 1: print("Underground energies written to " + file_name + ".")
+        if constants.get_verbose() > 1:
+            print("Underground energies written to " + file_name + ".")
 
     return u_energies
 
@@ -251,7 +288,7 @@ def propagate_muons(seed=0, job_array_number=0, output=None, force=False):
 # Load underground energies
 
 
-def _load_u_energies_from_files(file_name, n_job = 1, force = False):
+def _load_u_energies_from_files(file_name, n_job=1, force=False):
 
     """
     Load the underground energies resulting from the PROPOSAL Monte Carlo from a file or collection of files stored in data/underground_energies.
@@ -260,7 +297,7 @@ def _load_u_energies_from_files(file_name, n_job = 1, force = False):
     ----------
     file_name : str, optional
         The file name pattern that the underground energy data is stored in. This should end in an underscore so the function can append the job array number.
-    
+
     n_job : int, optional (default: 1)
         The number of jobs that were run on the computer cluster. Set this to the number of files the underground energies are spread across.
 
@@ -283,7 +320,10 @@ def _load_u_energies_from_files(file_name, n_job = 1, force = False):
 
         if constants.get_verbose() >= 1:
 
-            print(constants.get_directory() + "/underground_energies does not exist. Underground energies not loaded.")
+            print(
+                constants.get_directory()
+                + "/underground_energies does not exist. Underground energies not loaded."
+            )
 
         return None
 
@@ -296,25 +336,31 @@ def _load_u_energies_from_files(file_name, n_job = 1, force = False):
             print(file_name + "_0.npy does not exist. Underground energies not loaded.")
 
         return None
-    
-    # Fill a u_energies array with empty lists that will be able to be extended
-    
-    u_energies = np.empty((len(constants.ENERGIES), len(constants.SLANT_DEPTHS)), dtype = object)
-    
-    for i in np.ndindex(u_energies.shape): u_energies[i] = []
-        
-    # Loop over all output files and add the contents to u_energies
-    
-    for a in (tqdm(range(n_job)) if constants.get_verbose() >= 1 else range(n_job)):
-        
-        u_energies += np.load(file_name + "_" + str(a) + ".npy", allow_pickle = True)
 
-    if constants.get_verbose() > 1: print("Loaded underground energies.")
+    # Fill a u_energies array with empty lists that will be able to be extended
+
+    u_energies = np.empty(
+        (len(constants.ENERGIES), len(constants.SLANT_DEPTHS)), dtype=object
+    )
+
+    for i in np.ndindex(u_energies.shape):
+        u_energies[i] = []
+
+    # Loop over all output files and add the contents to u_energies
+
+    for a in tqdm(range(n_job)) if constants.get_verbose() >= 1 else range(n_job):
+
+        u_energies += np.load(file_name + "_" + str(a) + ".npy", allow_pickle=True)
+
+    if constants.get_verbose() > 1:
+        print("Loaded underground energies.")
 
     return u_energies
 
 
-def calc_survival_probability_tensor(seed=0, file_name = None, n_job = 1, output=None, force=False):
+def calc_survival_probability_tensor(
+    seed=0, file_name=None, n_job=1, output=None, force=False
+):
 
     """
     Calculate survival probabilities for the default surface energy grid and slant depths.
@@ -325,10 +371,10 @@ def calc_survival_probability_tensor(seed=0, file_name = None, n_job = 1, output
     ----------
     seed : int, optional (default: 0)
         The random seed for use in the PROPOSAL propagator.
-    
+
     file_name : str, optional
         The file name pattern that the underground energy data is stored in. This should end in an underscore so the function can append the job array number.
-    
+
     n_job : int, optional (default: 1)
         The number of jobs that were run on the computer cluster. Set this to the number of files the underground energies are spread across.
 
@@ -346,42 +392,61 @@ def calc_survival_probability_tensor(seed=0, file_name = None, n_job = 1, output
 
     # Check values
 
-    if output is None: output = constants.get_output()
-    
+    if output is None:
+        output = constants.get_output()
+
     # Construct a file name
-    
-    file_name_default = os.path.join(constants.get_directory(), "underground_energies", "{0}_{1}_{2}_Underground_Energies".format(constants.get_medium(), constants.get_density(), int(constants.get_n_muon()/n_job)))
-    
+
+    file_name_default = os.path.join(
+        constants.get_directory(),
+        "underground_energies",
+        "{0}_{1}_{2}_Underground_Energies".format(
+            constants.get_medium(),
+            constants.get_density(),
+            int(constants.get_n_muon() / n_job),
+        ),
+    )
+
     # Check if propagate_muons() should be forced or not
     # If not, check if underground energy files exist
     # If not, ask if muons should be propagated
 
     if force:
 
-        u_energies = propagate_muons(seed = seed, output = output, force = force)
+        u_energies = propagate_muons(seed=seed, output=output, force=force)
 
     else:
-        
+
         # Check if the user has specified underground energies to load
         # If not, look for the default file name pattern, and check if it exists
         # If so, load the underground energies
         # If not, ask if muons should be propagated
-        
+
         if file_name is not None:
-            
-            u_energies = _load_u_energies_from_files(file_name = os.path.join(constants.get_directory(), "underground_energies", file_name), n_job = n_job, force = force)
-        
+
+            u_energies = _load_u_energies_from_files(
+                file_name=os.path.join(
+                    constants.get_directory(), "underground_energies", file_name
+                ),
+                n_job=n_job,
+                force=force,
+            )
+
         elif os.path.isfile(file_name_default + "_0.npy"):
 
-            u_energies = _load_u_energies_from_files(file_name = file_name_default, n_job = n_job, force = force)
+            u_energies = _load_u_energies_from_files(
+                file_name=file_name_default, n_job=n_job, force=force
+            )
 
         else:
 
-            answer = input("No underground energy file currently exists for the set lab, medium, or number of muons. Would you like to create one (y/n)?: ")
-            
+            answer = input(
+                "No underground energy file currently exists for the set lab, medium, or number of muons. Would you like to create one (y/n)?: "
+            )
+
             if answer.lower() == "y":
-                
-                u_energies = propagate_muons(seed = seed, output = output, force = force)
+
+                u_energies = propagate_muons(seed=seed, output=output, force=force)
 
             else:
 
@@ -389,13 +454,13 @@ def calc_survival_probability_tensor(seed=0, file_name = None, n_job = 1, output
                 print("Survival probabilities not calculated.")
 
                 return
-    
+
     # Check that the underground energies were loaded
-    
+
     if u_energies is None:
-        
+
         print("Survival probabilities not calculated.")
-        
+
         return
 
     # Calculate the survival probabilities
@@ -403,7 +468,9 @@ def calc_survival_probability_tensor(seed=0, file_name = None, n_job = 1, output
     # Second index = Slant depth
     # Third index  = Underground energy
 
-    survival = np.zeros((len(constants.ENERGIES), len(constants.SLANT_DEPTHS), len(constants.ENERGIES)))
+    survival = np.zeros(
+        (len(constants.ENERGIES), len(constants.SLANT_DEPTHS), len(constants.ENERGIES))
+    )
 
     if constants.get_verbose() > 1:
         print("Calculating survival probabilities.")
@@ -411,8 +478,10 @@ def calc_survival_probability_tensor(seed=0, file_name = None, n_job = 1, output
     for i in range(len(constants.ENERGIES)):
 
         for x in range(len(constants.SLANT_DEPTHS)):
-            
-            survival[i, x, :] = np.histogram(np.array(u_energies[i, x]), bins=constants.E_BINS)[0] / float(constants.get_n_muon())
+
+            survival[i, x, :] = np.histogram(
+                np.array(u_energies[i, x]), bins=constants.E_BINS
+            )[0] / float(constants.get_n_muon())
 
     if constants.get_verbose() > 1:
         print("Finished calculating survival probabilities.")
@@ -421,10 +490,19 @@ def calc_survival_probability_tensor(seed=0, file_name = None, n_job = 1, output
 
     if output:
 
-        constants.check_directory(os.path.join(constants.get_directory(), "survival_probabilities"), force=force)
-        
-        file_name = os.path.join(constants.get_directory(), "survival_probabilities", "{0}_{1}_{2}_Survival_Probabilities.txt".format(constants.get_medium(), constants.get_density(), constants.get_n_muon()))
-        
+        constants.check_directory(
+            os.path.join(constants.get_directory(), "survival_probabilities"),
+            force=force,
+        )
+
+        file_name = os.path.join(
+            constants.get_directory(),
+            "survival_probabilities",
+            "{0}_{1}_{2}_Survival_Probabilities.txt".format(
+                constants.get_medium(), constants.get_density(), constants.get_n_muon()
+            ),
+        )
+
         file_out = open(file_name, "w")
 
         for i in range(len(constants.ENERGIES)):
@@ -493,8 +571,14 @@ def load_survival_probability_tensor_from_file(force=False):
             return None
 
     # Construct a file name based on the set lab, medium, and number of muons
-    
-    file_name = os.path.join(constants.get_directory(), "survival_probabilities", "{0}_{1}_{2}_Survival_Probabilities.txt".format(constants.get_medium(), constants.get_density(), constants.get_n_muon()))
+
+    file_name = os.path.join(
+        constants.get_directory(),
+        "survival_probabilities",
+        "{0}_{1}_{2}_Survival_Probabilities.txt".format(
+            constants.get_medium(), constants.get_density(), constants.get_n_muon()
+        ),
+    )
 
     # Check if the file exists
     # Also check that the file has the correct number of energies and angles
@@ -543,7 +627,9 @@ def print_survival_probability_tensor_grids(file_name):
 
     """Return the slant depths and underground energies in a survival probability file."""
 
-    file_contents = np.loadtxt(os.path.join(constants.get_directory(), "survival_probabilities", file_name))
+    file_contents = np.loadtxt(
+        os.path.join(constants.get_directory(), "survival_probabilities", file_name)
+    )
 
     file_s_energies = np.unique(file_contents[:, 0])
     file_slant_depths = np.unique(file_contents[:, 1])
