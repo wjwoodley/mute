@@ -3,7 +3,7 @@
 ###                    ###
 ###  MUTE              ###
 ###  William Woodley   ###
-###  19 December 2021  ###
+###  24 December 2021  ###
 ###                    ###
 ##########################
 ##########################
@@ -911,11 +911,6 @@ def calc_u_tot_flux(
     u_tot_flux : float
         The total underground flux in units of [cm^(-2) s^(-1)].
     """
-
-    # Check values
-
-    if output is None:
-        output = constants.get_output()
 
     # Calculate the total underground flux for a flat overburden
 
