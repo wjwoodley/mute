@@ -3,7 +3,7 @@
 ###                    ###
 ###  MUTE              ###
 ###  William Woodley   ###
-###  19 December 2021  ###
+###  24 December 2021  ###
 ###                    ###
 ##########################
 ##########################
@@ -198,13 +198,6 @@ def set_vertical_depth(vertical_depth):
     global _vertical_depth
     global slant_depths
     global angles
-
-    assert (
-        vertical_depth >= 1
-    ), "Vertical depths less than 1 km.w.e. are not currently supported."
-    assert (
-        vertical_depth <= 12
-    ), "Vertical depths greater than 12 km.w.e. are not currenlty supported."
 
     _vertical_depth = vertical_depth
 

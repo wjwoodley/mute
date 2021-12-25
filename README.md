@@ -1,5 +1,7 @@
 # MUTE
 
+[![DOI](https://zenodo.org/badge/DOI/10.5282/zenodo.5791812.svg)](https://doi.org/10.5281/zenodo.5791812)
+
 MUTE (**MU**on in**T**ensity cod**E**) is a computational tool for calculating atmospheric muon fluxes and intensities underground. It makes use of the state-of-the-art codes [MCEq](https://github.com/afedynitch/MCEq), to calculate surface fluxes, and [PROPOSAL](https://github.com/tudo-astroparticlephysics/PROPOSAL), to simulate the propagation of muons through rock and water.
 
 ## Installation
@@ -29,6 +31,8 @@ For a basic example and a detailed description of how to use MUTE, see the [Tuto
 ## Citation
 
 Please cite https://inspirehep.net/literature/1927720.
+
+The current version of MUTE can be cited with the [Zenodo DOI](https://zenodo.org/record/5791812).
 
 The citations for the models and propagation tools used by MUTE can be found in the [MCEq](https://github.com/afedynitch/MCEq#please-cite-our-work) and [PROPOSAL](https://github.com/tudo-astroparticlephysics/PROPOSAL#how-to-cite-proposal) documentation.
 
