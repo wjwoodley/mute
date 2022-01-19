@@ -30,8 +30,8 @@ def download_file(url, dir_out):
     os.chdir("..")
 
     # Delete the zip file
-
-    os.remove(file_out)
+    if os.isfile(file_out):
+        os.remove(file_out)
 
 
 # Download the files from GitHub
