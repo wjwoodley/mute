@@ -46,8 +46,12 @@ def download_file(url, dir_out):
     os.chdir("..")
 
     # Delete the zip file
+<<<<<<< HEAD
 
     if os.path.isfile(file_out):
+=======
+    if os.isfile(file_out):
+>>>>>>> 126c5bbef5fbbc50ef1803c69f73bc43fd0354ca
         os.remove(file_out)
 
 
