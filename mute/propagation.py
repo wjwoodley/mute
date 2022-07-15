@@ -3,7 +3,7 @@
 ###                   ###
 ###  MUTE             ###
 ###  William Woodley  ###
-###  14 July 2022     ###
+###  15 July 2022     ###
 ###                   ###
 #########################
 #########################
@@ -35,7 +35,7 @@ def _create_propagator(force):
     # Check values
 
     constants._check_constants(force=force)
-    
+
     # The creation of the propagator can be very slow the first time
     # The propagator is used in every iteration of the doubly-nested propagation loop
     # Make it a global variable so it only has to be created once
@@ -69,7 +69,9 @@ def _create_propagator(force):
     else:
 
         raise NotImplementedError(
-            "Medium type {0} not implemented. The only options are {1}, {2}, {3}, and {4}.".format(constants.get_medium(), "rock", "water", "ice", "air")
+            "Medium type {0} not implemented. The only options are {1}, {2}, {3}, and {4}.".format(
+                constants.get_medium(), "rock", "water", "ice", "air"
+            )
         )
 
     args = {"particle_def": mu, "target": medium, "interpolate": True, "cuts": cuts}
@@ -165,7 +167,10 @@ def _propagation_loop(energy, slant_depth, force):
         # If it does, record its energy
         # If it does not, ignore this muon and proceed with the next loop iteration
 
-        if (track.track_energies()[-1] != constants._MU_MASS and track.track_types()[-1] != pp.particle.Interaction_Type.decay):
+        if (
+            track.track_energies()[-1] != constants._MU_MASS
+            and track.track_types()[-1] != pp.particle.Interaction_Type.decay
+        ):
 
             # Store the final underground energy of the muon
 
@@ -184,7 +189,7 @@ def propagate_muons(seed=0, job_array_number=0, output=None, force=False):
     """
     Propagate muons for the default surface energy grid and slant depths.
 
-    The default surface energy grid is given by constants._ENERGIES, and the default slant depths are given by constants._SLANT_DEPTHS.
+    The default surface energy grid is given by constants.ENERGIES, and the default slant depths are given by constants._SLANT_DEPTHS.
 
     Parameters
     ----------
@@ -226,29 +231,43 @@ def propagate_muons(seed=0, job_array_number=0, output=None, force=False):
     # Initialise a matrix of underground energies
 
     u_energies = np.zeros(
-        (len(constants._ENERGIES), len(constants._SLANT_DEPTHS)), dtype=np.ndarray
+        (len(constants.ENERGIES), len(constants._SLANT_DEPTHS)), dtype=np.ndarray
     )
 
     # Run the propagation function
 
     if constants.get_verbose() >= 1:
-        
-        print("Propagating {0} muons.".format(constants.get_n_muon()*len(constants._ENERGIES)*len(constants._SLANT_DEPTHS)))
 
-    for i in (tqdm(range(len(constants._ENERGIES))) if constants.get_verbose() >= 1 else range(len(constants._ENERGIES))):
+        print(
+            "Propagating {0} muons.".format(
+                constants.get_n_muon()
+                * len(constants.ENERGIES)
+                * len(constants._SLANT_DEPTHS)
+            )
+        )
+
+    for i in (
+        tqdm(range(len(constants.ENERGIES)))
+        if constants.get_verbose() >= 1
+        else range(len(constants.ENERGIES))
+    ):
 
         for x in range(len(constants._SLANT_DEPTHS)):
 
-            u_energies[i, x] = _propagation_loop(constants._ENERGIES[i], constants._SLANT_DEPTHS[x], force=force)
+            u_energies[i, x] = _propagation_loop(
+                constants.ENERGIES[i], constants._SLANT_DEPTHS[x], force=force
+            )
 
     if constants.get_verbose() >= 1:
         print("Finished propagation.")
-    
+
     # Write the results to the file
-    
+
     if output:
 
-        constants._check_directory(os.path.join(constants.get_directory(), "underground_energies"), force=force)
+        constants._check_directory(
+            os.path.join(constants.get_directory(), "underground_energies"), force=force
+        )
 
         file_name = os.path.join(
             constants.get_directory(),
@@ -300,11 +319,15 @@ def _load_u_energies_from_files(file_name_pattern, n_job=1, force=False):
 
     # Check that the directory exists
 
-    if not os.path.exists(os.path.join(constants.get_directory(), "underground_energies")):
+    if not os.path.exists(
+        os.path.join(constants.get_directory(), "underground_energies")
+    ):
 
         if constants.get_verbose() >= 1:
 
-            print(f"{constants.get_directory}/underground_energies does not exist. Underground energies not loaded.")
+            print(
+                f"{constants.get_directory}/underground_energies does not exist. Underground energies not loaded."
+            )
 
         return
 
@@ -314,14 +337,16 @@ def _load_u_energies_from_files(file_name_pattern, n_job=1, force=False):
 
         if constants.get_verbose() >= 1:
 
-            print(f"{file_name_pattern}_0.npy does not exist. Underground energies not loaded.")
+            print(
+                f"{file_name_pattern}_0.npy does not exist. Underground energies not loaded."
+            )
 
         return
 
     # Fill a u_energies array with empty lists that will be able to be extended
 
     u_energies = np.empty(
-        (len(constants._ENERGIES), len(constants._SLANT_DEPTHS)), dtype=object
+        (len(constants.ENERGIES), len(constants._SLANT_DEPTHS)), dtype=object
     )
 
     for i in np.ndindex(u_energies.shape):
@@ -329,23 +354,31 @@ def _load_u_energies_from_files(file_name_pattern, n_job=1, force=False):
 
     # Loop over all output files and add the contents to u_energies
 
-    for job_array_number in tqdm(range(n_job)) if constants.get_verbose() >= 1 else range(n_job):
+    for job_array_number in (
+        tqdm(range(n_job)) if constants.get_verbose() >= 1 else range(n_job)
+    ):
 
-        u_energies += np.load(f"{file_name_pattern}_{job_array_number}.npy", allow_pickle=True)
+        u_energies += np.load(
+            f"{file_name_pattern}_{job_array_number}.npy", allow_pickle=True
+        )
 
     if constants.get_verbose() > 1:
         print("Loaded underground energies.")
 
     return u_energies
 
+
 # Calculate survival probabilities
 
-def calc_survival_probability_tensor(seed=0, file_name_pattern=None, n_job=1, output=None, file_name="", force=False):
+
+def calc_survival_probability_tensor(
+    seed=0, file_name_pattern=None, n_job=1, output=None, file_name="", force=False
+):
 
     """
     Calculate survival probabilities in units of [(MeV^2 km.w.e.)^-1] for the default surface energy grid and slant depths.
 
-    The default surface energy grid is given by constants._ENERGIES, and the default slant depths are given by constants._SLANT_DEPTHS. If the propagation of muons has already been done, this will load the underground energies file, unless force is set to True.
+    The default surface energy grid is given by constants.ENERGIES, and the default slant depths are given by constants._SLANT_DEPTHS. If the propagation of muons has already been done, this will load the underground energies file, unless force is set to True.
 
     Parameters
     ----------
@@ -360,7 +393,7 @@ def calc_survival_probability_tensor(seed=0, file_name_pattern=None, n_job=1, ou
 
     output : bool, optional (default: taken from constants.get_output())
         If True, an output file will be created to store the results.
-    
+
     file_name : str, optional (default: constructed from set global propagation constants)
         The name of the file in which to store the results. If output is False or None, this is ignored.
 
@@ -407,15 +440,25 @@ def calc_survival_probability_tensor(seed=0, file_name_pattern=None, n_job=1, ou
 
         if file_name_pattern is not None:
 
-            u_energies = _load_u_energies_from_files(file_name_pattern=os.path.join(constants.get_directory(), "underground_energies", file_name_pattern), n_job=n_job, force=force)
+            u_energies = _load_u_energies_from_files(
+                file_name_pattern=os.path.join(
+                    constants.get_directory(), "underground_energies", file_name_pattern
+                ),
+                n_job=n_job,
+                force=force,
+            )
 
         elif os.path.isfile(f"{file_name_pattern_default}_0.npy"):
 
-            u_energies = _load_u_energies_from_files(file_name_pattern=file_name_pattern_default, n_job=n_job, force=force)
+            u_energies = _load_u_energies_from_files(
+                file_name_pattern=file_name_pattern_default, n_job=n_job, force=force
+            )
 
         else:
 
-            answer = input("No underground energy file currently exists for the set medium, density, or number of muons. Would you like to create one (y/n)?: ")
+            answer = input(
+                "No underground energy file currently exists for the set medium, density, or number of muons. Would you like to create one (y/n)?: "
+            )
 
             if answer.lower() == "y":
 
@@ -431,8 +474,10 @@ def calc_survival_probability_tensor(seed=0, file_name_pattern=None, n_job=1, ou
     # Check that the underground energies were loaded
 
     if u_energies is None:
-        
-        raise Exception("Survival probabilities not calculated. The underground energies were not loaded or calculated correctly.")
+
+        raise Exception(
+            "Survival probabilities not calculated. The underground energies were not loaded or calculated correctly."
+        )
 
     # Calculate the survival probabilities
     # Zeroth index = Surface energy
@@ -440,18 +485,18 @@ def calc_survival_probability_tensor(seed=0, file_name_pattern=None, n_job=1, ou
     # Second index = Underground energy
 
     survival_probability_tensor = np.zeros(
-        (len(constants._ENERGIES), len(constants._SLANT_DEPTHS), len(constants._ENERGIES))
+        (len(constants.ENERGIES), len(constants._SLANT_DEPTHS), len(constants.ENERGIES))
     )
 
     if constants.get_verbose() > 1:
         print("Calculating survival probabilities.")
-    
+
     # Loop over the surface energies and slant depths
     # Histogram the underground energies to count how many are in each underground energy bin
     # Divide the counts by the number of muons
     # This counts how many muons survived per bin out of the total number that was thrown
 
-    for i in range(len(constants._ENERGIES)):
+    for i in range(len(constants.ENERGIES)):
 
         for x in range(len(constants._SLANT_DEPTHS)):
 
@@ -470,24 +515,32 @@ def calc_survival_probability_tensor(seed=0, file_name_pattern=None, n_job=1, ou
             os.path.join(constants.get_directory(), "survival_probabilities"),
             force=force,
         )
-        
+
         if file_name == "" or not isinstance(file_name, str):
-            
-            file_name = os.path.join(constants.get_directory(), "survival_probabilities", "{0}_{1}_{2}_Survival_Probabilities.txt".format(constants.get_medium(), constants.get_density(), constants.get_n_muon()))
+
+            file_name = os.path.join(
+                constants.get_directory(),
+                "survival_probabilities",
+                "{0}_{1}_{2}_Survival_Probabilities.txt".format(
+                    constants.get_medium(),
+                    constants.get_density(),
+                    constants.get_n_muon(),
+                ),
+            )
 
         file_out = open(file_name, "w")
 
-        for i in range(len(constants._ENERGIES)):
+        for i in range(len(constants.ENERGIES)):
 
             for x in range(len(constants._SLANT_DEPTHS)):
 
-                for u in range(len(constants._ENERGIES)):
+                for u in range(len(constants.ENERGIES)):
 
                     file_out.write(
                         "{0:1.14f} {1:1.5f} {2:1.14f} {3:1.14e}\n".format(
-                            constants._ENERGIES[i],
+                            constants.ENERGIES[i],
                             constants._SLANT_DEPTHS[x],
-                            constants._ENERGIES[u],
+                            constants.ENERGIES[u],
                             survival_probability_tensor[i, x, u],
                         )
                     )
@@ -500,7 +553,7 @@ def calc_survival_probability_tensor(seed=0, file_name_pattern=None, n_job=1, ou
     return survival_probability_tensor
 
 
-def load_survival_probability_tensor_from_file(file_name = "", force=False):
+def load_survival_probability_tensor_from_file(file_name="", force=False):
 
     """
     Retrieve a survival probability tensor in units of [(MeV^2 km.w.e.)^-1] stored in data/survival_probabilities based on the set global propagation constants.
@@ -511,7 +564,7 @@ def load_survival_probability_tensor_from_file(file_name = "", force=False):
     ----------
     file_name : str, optional (default: constructed from set global propagation constants)
         The name of the file in which to store the results. If output is False or None, this is ignored.
-    
+
     force : bool
         If True, force the calculation of a new survival probability tensor and the creation of new directories if required.
 
@@ -520,26 +573,45 @@ def load_survival_probability_tensor_from_file(file_name = "", force=False):
     survival_probability_tensor : NumPy ndarray
         A three-dimensional array containing the survival probabilities. The shape of the array will be (91, 28, 91), and the survival probabilities will be in units of [(MeV^2 km.w.e.)^-1].
     """
-    
+
     # Check values
-    
+
     constants._check_constants(force=force)
-    
+
     # Check if a survival probability tensor has already been loaded
     # If so, return the tensor that has already been loaded
     # If not, load a tensor based on the set global propagation constants
-    
-    if constants._current_survival_probability_tensor is not None and constants._survival_probability_tensor_configuration == {"medium": constants.get_medium(), "density": constants.get_density(), "n_muon": constants.get_n_muon()}:
-        
-        if constants.get_verbose() > 1: print("Survival probabilities already loaded for {0} with density {1} gcm^-3 and {2} muons.".format(constants._survival_probability_tensor_configuration["medium"], constants._survival_probability_tensor_configuration["density"], constants._survival_probability_tensor_configuration["n_muon"]))
-        
+
+    if (
+        constants._current_survival_probability_tensor is not None
+        and constants._survival_probability_tensor_configuration
+        == {
+            "medium": constants.get_medium(),
+            "density": constants.get_density(),
+            "n_muon": constants.get_n_muon(),
+        }
+    ):
+
+        if constants.get_verbose() > 1:
+            print(
+                "Survival probabilities already loaded for {0} with density {1} gcm^-3 and {2} muons.".format(
+                    constants._survival_probability_tensor_configuration["medium"],
+                    constants._survival_probability_tensor_configuration["density"],
+                    constants._survival_probability_tensor_configuration["n_muon"],
+                )
+            )
+
         return constants._current_survival_probability_tensor
-    
+
     # Define a function to update the survival probability tensor cache
-    
-    def update_cache (survival_probability_tensor):
-        
-        constants._survival_probability_tensor_configuration = {"medium": constants.get_medium(), "density": constants.get_density(), "n_muon": constants.get_n_muon()}
+
+    def update_cache(survival_probability_tensor):
+
+        constants._survival_probability_tensor_configuration = {
+            "medium": constants.get_medium(),
+            "density": constants.get_density(),
+            "n_muon": constants.get_n_muon(),
+        }
         constants._current_survival_probability_tensor = survival_probability_tensor
 
     # Define a function to run if there is no survival probability file
@@ -550,14 +622,16 @@ def load_survival_probability_tensor_from_file(file_name = "", force=False):
 
         if not force:
 
-            answer = input("No survival probability matrix currently exists for the set medium, density, or number of muons. Would you like to create one (y/n)?: ")
+            answer = input(
+                "No survival probability matrix currently exists for the set medium, density, or number of muons. Would you like to create one (y/n)?: "
+            )
 
         if force or answer.lower() == "y":
 
             survival_probability_tensor = calc_survival_probability_tensor(force=force)
-            
+
             update_cache(survival_probability_tensor)
-            
+
             return survival_probability_tensor
 
         else:
@@ -565,54 +639,62 @@ def load_survival_probability_tensor_from_file(file_name = "", force=False):
             print("Survival probabilities not calculated.")
 
             return
-    
+
     # Construct a file name based on the set medium, density, and number of muons if one has not been provided
-    
+
     if file_name == "" or not isinstance(file_name, str):
-        
-        file_name = os.path.join(constants.get_directory(), "survival_probabilities", "{0}_{1}_{2}_Survival_Probabilities.txt".format( constants.get_medium(), constants.get_density(), constants.get_n_muon()))
-    
+
+        file_name = os.path.join(
+            constants.get_directory(),
+            "survival_probabilities",
+            "{0}_{1}_{2}_Survival_Probabilities.txt".format(
+                constants.get_medium(), constants.get_density(), constants.get_n_muon()
+            ),
+        )
+
     # Check if the file exists
 
     if os.path.isfile(file_name):
 
         if constants.get_verbose() > 1:
             print(f"Loading survival probabilities from {file_name}.")
-        
+
         # Check that the file has the correct numbers of energies and slant depths
 
         file = open(file_name, "r")
         n_lines = len(file.read().splitlines())
         file.close()
-        
+
         # If so, read in the survival probabilities in from it
 
-        if n_lines == len(constants._ENERGIES) * len(constants._SLANT_DEPTHS) * len(constants._ENERGIES):
+        if n_lines == len(constants.ENERGIES) * len(constants._SLANT_DEPTHS) * len(
+            constants.ENERGIES
+        ):
 
             survival_probability_tensor = np.reshape(
                 np.loadtxt(file_name)[:, 3],
                 (
-                    len(constants._ENERGIES),
+                    len(constants.ENERGIES),
                     len(constants._SLANT_DEPTHS),
-                    len(constants._ENERGIES),
+                    len(constants.ENERGIES),
                 ),
             )
 
             if constants.get_verbose() > 1:
                 print("Loaded survival probabilities.")
-            
+
             update_cache(survival_probability_tensor)
-            
+
             return survival_probability_tensor
-        
+
         # If the file does not have the correct numbers of energies and slant depths, run the no_file() function
-        
+
         else:
 
             return no_file(force=force)
-    
+
     # If the file does not exist, run the no_file() function
-    
+
     else:
 
         return no_file(force=force)

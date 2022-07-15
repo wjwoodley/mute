@@ -10,7 +10,7 @@ def test_u_intensities():
 
     mtc.clear()
 
-    u_intensities_calc = mtu.calc_u_intensities(method = "sd", output=False, force=True)
+    u_intensities_calc = mtu.calc_u_intensities(method="sd", output=False, force=True)
     u_intensities_read = [
         5.44204714e-06,
         1.36106429e-06,

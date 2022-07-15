@@ -8,11 +8,12 @@
 4. [Units](#units)
 5. [Slant Depths and Angles](#slant-depths-and-angles)
 6. [Calculating Underground Intensities](#calculating-underground-intensities)
-7. [Calculating Underground Fluxes](#calculating-underground-fluxes)
-8. [Calculating Total Underground Fluxes](#calculating-total-underground-fluxes)
-9. [Calculating Surface Fluxes and Intensities](#calculating-surface-fluxes-and-intensities)
-10. [Calculating Survival Probabilities](#calculating-survival-probabilities)
-11. [Using MUTE on a Computer Cluster](#using-mute-on-a-computer-cluster)
+7. [Changing the Models](#changing-the-models)
+8. [Calculating Underground Fluxes](#calculating-underground-fluxes)
+9. [Calculating Total Underground Fluxes](#calculating-total-underground-fluxes)
+10. [Calculating Surface Fluxes and Intensities](#calculating-surface-fluxes-and-intensities)
+11. [Calculating Survival Probabilities](#calculating-survival-probabilities)
+12. [Using MUTE on a Computer Cluster](#using-mute-on-a-computer-cluster)
 
 ## Short Example
 
@@ -40,9 +41,8 @@ intensities_SIBYLL = mtu.calc_u_intensities(method = "tr", interaction_model = "
 # Plot the results
 
 plt.figure(facecolor = "white")
-plt.plot(mtc.slant_depths, intensities_DDM, color = "blue", label = "DDM")
-plt.plot(mtc.slant_depths, intensities_SIBYLL, color = "magenta", label = "SIBYLL-2.3d")
-plt.semilogy()
+plt.semilogy(mtc.slant_depths, intensities_DDM, color = "blue", label = "DDM")
+plt.semilogy(mtc.slant_depths, intensities_SIBYLL, color = "magenta", label = "SIBYLL-2.3d")
 plt.legend()
 plt.show()
 ```
@@ -119,6 +119,8 @@ The following are the default units used throughout MUTE:
 
 ## Slant Depths and Angles
 
+**NOTE:** The slant depths and angles in MUTE should not be changed directly. If custom values are needed, the ``depths`` and ``angles`` arguments in the ``mtu.calc_u_intensities()`` and ``mtu.calc_u_tot_flux()`` functions can be used. If these are not sufficient, the final results can be interpolated to custom depths and angles. MUTE will raise an exception if any of ``mtc.ENERGIES``, ``mtc._SLANT_DEPTHS``, ``mtc._ANGLES``, ``mtc.ANGLES_FOR_S_FLUXES``, ``mtc.slant_depths``, or ``mtc.angles`` are changed.
+
 The default slant depths and zenith angles are given by the following constants:
 
 * **``mtc._SLANT_DEPTHS``:** An array of 28 default slant depths between 0.5 km.w.e. and 14 km.w.e., going up in steps of 0.5 km.w.e., defined by ``np.linspace(0.5, 14, 28)``.
@@ -136,7 +138,7 @@ array([ 0.        , 60.        , 70.52877937, 75.52248781, 78.46304097,
        87.27059736, 87.39474873, 87.50809363, 87.61198454, 87.70755722,
        87.7957725 , 87.87744864, 87.9532869 ])
 ```
-* **``mtc._ANGLES_FOR_S_FLUXES``:** An array of 20 default equally-spaced zenith angles between 0 degrees and 90 degrees for use in calculate the surface fluxes.
+* **``mtc.ANGLES_FOR_S_FLUXES``:** An array of 20 default equally-spaced zenith angles between 0 degrees and 90 degrees for use in calculate the surface fluxes.
 ```
 array([ 0.        ,  4.73684211,  9.47368421, 14.21052632, 18.94736842,
        23.68421053, 28.42105263, 33.15789474, 37.89473684, 42.63157895,
@@ -144,7 +146,7 @@ array([ 0.        ,  4.73684211,  9.47368421, 14.21052632, 18.94736842,
        71.05263158, 75.78947368, 80.52631579, 85.26315789, 90.        ])
 ```
 
-All calculations of surface flux matrices, survival probability tensors, and undeground flux matrices and tensors are done using these default values. For calculations after these basic steps, like those for underground intensities, interpolations are done to the values in ``constants.slant_depths`` and ``constants.angles`` (which have default values ``mtc._SLANT_DEPTHS`` and ``mtc._ANGLES`` respectively).
+All calculations of surface flux matrices, survival probability tensors, and undeground flux matrices and tensors are done using these default values. For calculations after these basic steps, like those for underground intensities, interpolations are done to the values in ``mtc.slant_depths`` and ``mtc.angles`` (which have default values ``mtc._SLANT_DEPTHS`` and ``mtc._ANGLES`` respectively).
 
 ### Flat Overburdens
 
@@ -183,11 +185,13 @@ However, this is not recommended. Results that depend on extrapolation up to sha
 
 ### Mountains
 
-``mtc.slant_depths`` and ``mtc.angles`` are not used for mountain overburdens. Instead, after loading the mountain profile (see [above](#loading-mountain-profiles)), MUTE makes available three new global variables that are used access the angles and slant depths from the mountain profile. They are:
+``mtc.slant_depths`` and ``mtc.angles`` are not used for mountain overburdens. Instead, after loading the mountain profile (see [above](#loading-mountain-profiles)), MUTE makes available three new global variables that are used to access the angles and slant depths from the mountain profile. They are:
 
-* **``mtc.mountain_zenith``:** An array of unique and sorted zenith angles from the file, in degrees.
-* **``mtc.mountain_azimuthal``:** An array of unique and sorted azimuthal angles from the file, in degrees.
-* **``mtc.mountain_slants``:** A matrix of unique and sorted slant depths from the file, in km.w.e.
+* **``mtc.mountain.zenith``:** An array of unique and sorted zenith angles from the file, in degrees.
+* **``mtc.mountain.azimuthal``:** An array of unique and sorted azimuthal angles from the file, in degrees.
+* **``mtc.mountain.slant_depths``:** A matrix of unique and sorted slant depths from the file, in km.w.e.
+
+Note that these are immutable objects. They can only be changed by changing the contents of the profile file that is loaded.
 
 ## Calculating Underground Intensities
 
@@ -270,10 +274,10 @@ If no underground flux tensor is provided, the surface flux matrix and survival 
 
 #### Specifying Angles
 
-The function call above will return an array of underground muon intensities for the 28 default angles (or otherwise, depending on the value set for the vertical depth; see [above](#flat-overburdens)). The angles can be changed by passing angles in degrees (float or array-like) into the function. To return the underground intensities for 100 angles between 0 and 85 degrees, for example, one can do:
+The function call above will return an array of underground muon intensities for the 28 default angles (or otherwise, depending on the value set for the vertical depth; see [above](#flat-overburdens)). The angles can be changed by passing angles in degrees (float or array-like) into the function. To return the underground intensities for 100 angles between 20 and 85 degrees, for example, one can do:
 
 ```python
-angles = np.linspace(0, 85, 100)
+angles = np.linspace(20, 85, 100)
 
 mtu.calc_u_intensities(method = "sd", angles = angles)
 ```
@@ -344,7 +348,7 @@ The function is called similarly to that for single-differential underground int
 mtu.calc_u_intensities(method = "dd", output = None, file_name = "", force = False, u_fluxes = None, s_fluxes = None, survival_probability_tensor = None, E_th = 0, primary_model = "GSF", interaction_model = "SIBYLL-2.3c", atmosphere = "CORSIKA", location = "USStd", month = None)
 ```
 
-This returns a two-dimensional array of shape ``(len(mtc.mountain_zenith), len(mtc.mountain_azimuthal))``. The underground intensities in the array will have units of (cm$^2$ s sr km.w.e.)$^{-1}$.
+This returns a two-dimensional array of shape ``(len(mtc.mountain.zenith), len(mtc.mountain.azimuthal))``. The underground intensities in the array will have units of (cm$^2$ s sr km.w.e.)$^{-1}$.
 
 ## Changing the Models
 
@@ -362,16 +366,20 @@ The default primary cosmic ray flux model is ``"GSF"``, for GlobalSplineFitBeta,
 To calculate underground intensities for GaisserHonda, for example, one can do:
 
 ```python
-mtu.calc_u_intensities(primary_model = "GH")
+mtu.calc_u_intensities(method = "sd", primary_model = "GH")
 ```
 
-Alternatively, the primary model may be set using a tuple. This gives access to the rest of the models available in MCEq. For example:
+Alternatively, in the ``mts.calc_s_fluxes()`` function, the primary model may be set using a tuple. This gives access to the rest of the models available in MCEq. For example:
 
 ```python
 import crflux.models as pm
 
-mtu.calc_u_intensities(primary_model = (pm.GaisserStanevTilav, "3-gen"))
+s_fluxes = mts.calc_s_fluxes(primary_model = (pm.GaisserStanevTilav, "3-gen"))
+
+mtu.calc_u_intensities(method = "sd", s_fluxes = s_fluxes)
 ```
+
+This option is only available in the ``mts.calc_s_fluxes()`` function. The other loading and calculation functions require the primary model to be specified with one of the strings in the list above, as they will search for files with names that contain the strings.
 
 For more information, see the [MCEq Documentation](https://mceq.readthedocs.io/en/latest/tutorial.html#changing-cosmic-ray-flux-model) and the [crflux Documentation](https://crfluxmodels.readthedocs.io/en/latest/index.html). For an example, see [``/examples/example_primary_flux_models.ipynb``](../examples/example_primary_flux_models.ipynb).
 
@@ -380,7 +388,11 @@ For more information, see the [MCEq Documentation](https://mceq.readthedocs.io/e
 The default hadronic interaction model is ``"SIBYLL-2.3c"``, and is set with the ``interaction_model`` keyword argument. The following hadronic interaction models are available:
 
 * ``"DDM"``
+* ``"DDM_err_pos"`` (for positive errors on DDM)
+* ``"DDM_err_neg"`` (for negative errors on DDM)
 * ``"SIBYLL-2.3d"``
+* ``"SIBYLL-2.3d_pos"`` (for positive errors on SIBYLL-2.3d)
+* ``"SIBYLL-2.3d_err_neg"`` (for negative errors on SIBYLL-2.3d)
 * ``"SIBYLL-2.3c"``
 * ``"SIBYLL-2.3"``
 * ``"SIBYLL-2.1"``
@@ -392,7 +404,7 @@ The default hadronic interaction model is ``"SIBYLL-2.3c"``, and is set with the
 * ``"DPMJET-III-19.1"``
 * ``"SIBYLL-2.3c_pp"``
 
-Note that ``"DDM"`` and ``"SIBYLL-2.3d"`` are only available using the files provided on GitHub for the default primary model ``"GSF"``; MCEq cannot currently calculate new matrices for these models.
+Note that ``"DDM"`` and ``"SIBYLL-2.3d"`` (and their errors) are only available using the files provided by MUTE from GitHub for the default primary model ``"GSF"``; MCEq cannot currently calculate new matrices for these models. They will be implemented in v1.4 of MCEq.
 
 To calculate underground intensities for EPOS-LHC, for example, one can do:
 
@@ -437,10 +449,10 @@ Additional locations specified by ``(longitude, latitude, altitude)`` coordinate
 
 Month names are given in the variables ``mtc.MONTHS`` and ``mtc.MONTHS_SNAMES``, which are, respectively:
 
-```
+```python
 ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 ```
-```
+```python
 ["Jan.", "Feb.", "Mar.", "Apr.", "May.", "Jun.", "Jul.", "Aug.", "Sep.", "Oct.", "Nov.", "Dec."]
 ```
 
@@ -454,7 +466,7 @@ $$\Phi^u(E^u, X, \theta)=\sum_{E^s}\Phi^s(E^s, \theta)P(E^s, E^u, X)\left(\frac{
 
 where $\Phi^u(E^u, X, \theta)$ is the underground flux, $\Phi^s(E^s, \theta)$ is the surface flux, $P(E^s, E^u, X)$ is the survival probability tensor, and $\Delta E^s$ and $\Delta E^u$ are the energy bin widths for the surface and underground energies respectively.
 
-Underground fluxes can be calculated using the ``mtu.calc_u_fluxes()`` function. Its arguments are similar to those for ``mtu.calc_u_intensities()`` (see [above](#single-differential-underground-intensities)), with some differences. Running the line below will use the defaults for all of the arguments:
+Underground fluxes can be calculated using the ``mtu.calc_u_fluxes()`` function. Its arguments are similar to those for ``mtu.calc_u_intensities()`` (see [above](#single-differential-underground-intensities)), with some differences. There are no ``method``, ``u_fluxes``, or ``E_th`` arguments for this function. Additionally, it can take a ``full_tensor`` argument. Running the line below will use the defaults for all of the arguments:
 
 ```python
 mtu.calc_u_fluxes(s_fluxes = None, survival_probability_tensor = None, full_tensor = False, primary_model = "GSF", interaction_model = "SIBYLL-2.3c", atmosphere = "CORSIKA", location = "USStd", month = None, output = None, file_name = "", force = False)
@@ -462,7 +474,7 @@ mtu.calc_u_fluxes(s_fluxes = None, survival_probability_tensor = None, full_tens
 
 For a flat overburden, this function will return a two-dimensional array of shape ``(91, 28)``, where the zeroth axis is the underground energies, and the first axis is the zenith angles. The units of the underground fluxes will be (cm$^2$ s sr MeV)$^{-1}$. If the argument ``full_tensor`` is set to ``True``, the full three-dimensional array will be returned, rather than a two-dimensional array, as it is for the case of a mountain.
 
-For a mountain, this function will return a three-dimensional array of shape ``(28, 91, 20)``, where the zeroth axis is the slant depths, the first axis is the underground energies, and the second axis is the zenith angles (from ``mtc._ANGLES_FOR_S_FLUXES``). The units of the underground fluxes will be (cm$^2$ s sr MeV$^2$)$^{-1}$.
+For a mountain, this function will return a three-dimensional array of shape ``(28, 91, 20)``, where the zeroth axis is the slant depths, the first axis is the underground energies, and the second axis is the zenith angles (from ``mtc.ANGLES_FOR_S_FLUXES``). The units of the underground fluxes will be (cm$^2$ s sr MeV$^2$)$^{-1}$.
 
 For an example, see [``/examples/example_underground_flux.ipynb``](../examples/example_underground_flux.ipynb).
 
@@ -498,7 +510,7 @@ Surface flux matrices can be calculated using the ``mts.calc_s_fluxes()`` functi
 mts.calc_s_fluxes(primary_model = "GSF", interaction_model = "SIBYLL-2.3c", atmosphere = "CORSIKA", location = "USStd", month = None, output = None, file_name = "", force = False, test = False)
 ```
 
-This returns a two-dimensional array of shape ``(91, 20)``, where the zeroth axis is the surface energies, and the first axis is the zenith angles (from ``mtc._ANGLES_FOR_S_FLUXES``). The surface energy grid used throughout MUTE (``mtc._ENERGIES``) is the energy grid provided by MCEq, but with energies beyond 100 PeV cut, as the surface flux for energies higher than this is negligible for depths up to 14 km.w.e.
+This returns a two-dimensional array of shape ``(91, 20)``, where the zeroth axis is the surface energies, and the first axis is the zenith angles (from ``mtc.ANGLES_FOR_S_FLUXES``). The surface energy grid used throughout MUTE (``mtc.ENERGIES``) is the energy grid provided by MCEq, but with energies beyond 100 PeV cut, as the surface flux for energies higher than this is negligible for depths up to 14 km.w.e.
 
 To calculate surface fluxes using the HillasGaisser2012 primary flux model for Gran Sasso in January, for example, one can do:
 
@@ -526,7 +538,7 @@ Surface intensities can be calculated using the ``mts.calc_s_intensities()`` fun
 mts.calc_s_intensities(s_fluxes = None, primary_model = "GSF", interaction_model = "SIBYLL-2.3c", atmosphere = "CORSIKA", location = "USStd", month = None, output = None, file_name = "", force = False)
 ```
 
-This returns a one-dimensional array of length ``20`` (from ``mtc._ANGLES_FOR_S_FLUXES``). The surface intensities in the array will have units (cm$^2$ s sr)$^{-1}$.
+This returns a one-dimensional array of length ``20`` (from ``mtc.ANGLES_FOR_S_FLUXES``). The surface intensities in the array will have units (cm$^2$ s sr)$^{-1}$.
 
 ### Total Surface Fluxes
 

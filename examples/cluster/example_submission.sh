@@ -12,7 +12,6 @@
 
 #SBATCH --array=0-99%50
 
-module load python/3.7
 module load scipy-stack
 
 python3 example_cluster.py $SLURM_ARRAY_TASK_ID

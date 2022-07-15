@@ -1,13 +1,13 @@
 # Changelog
 
-## [2.0.0](https://github.com/wjwoodley/mute/releases/tag/2.0.0) - 14 July 2022
+## [2.0.0](https://github.com/wjwoodley/mute/releases/tag/2.0.0) - 15 July 2022
 
 ### **New Features**
 
 * **Mountains:** Calculations can now be done for non-flat overburdens. The ``calc_u_fluxes()`` function returns a three-dimensional tensor when the overburden type is set to ``"mountain"`` (or when the new ``full_tensor`` argument is set to ``True``). [An example](examples/example_mountain_calculations.ipynb) has been added to show this.
 * **Intensity Functions:** Intensities are now calculated with the ``mtu.calc_u_intensities()`` function by passing the ``method`` argument. The previous functions, ``mtu.calc_u_intensities_tr()`` and ``mtu.calc_u_intensities_eq()`` have been removed.
 * **Surface Calculations:** The functions ``mts.calc_s_intensities()`` and ``mts.calc_s_tot_fluxes()`` have been added for calculations of surface intensities and total fluxes.
-* **Calculations from Pre-Calculated Matrices:** Underground fluxes, intensities, and total fluxes can now be calculated from surface flux matrices and survival probability tensors that are already defined in the code by passing them directly into the function with the ``s_fluxes`` and ``survival_probability_tensor`` arguments. The old interface of specifying the models and atmospheres is also still available.
+* **Calculations from Pre-Calculated Matrices:** Underground fluxes, intensities, and total fluxes can now be calculated from underground flux matrices, surface flux matrices, and survival probability tensors that are already defined in the code by passing them directly into the function with the ``u_fluxes``, ``s_fluxes``, and ``survival_probability_tensor`` arguments. The old interface of specifying the models and atmospheres is also still available.
 * **Energy Threshold:** An energy threshold can now be specified by setting the ``E_th`` argument in ``mtu.calc_u_intensities()`` and ``mtu.calc_u_tot_fluxes`` to a value in MeV.
 * **File Names:** Custom input and output file names can now be used in all function by specifying the optional ``file_name`` argument. If the argument is not given, the default file name will be used. If ``output`` is set to ``False`` (either globally with ``mtc.set_output(False)`` or in the function call), no output will be written to the file, and the file name will be ignored. The previously-used ``file_name`` argument in ``mtp.calc_survival_probability_tensor()`` has been renamed ``file_name_pattern``.
 * **Primary Models:** The SimplePowerlaw27 model can now be set with ``"PL27"``.
@@ -27,7 +27,7 @@
 * **Slant Depths:** The default slant depths now go from 0.5 to 14 km.w.e. instead of 1 to 12 km.w.e. Values for slant depths outside this range are possible to calculate with the default transfer tensors by setting ``mtc.shallow_extrapolation`` to ``True``, but the results are not guaranteed to be good.
 * **Underground Fluxes Return:** The return of ``mtu.calc_u_fluxes()`` is now one single tensor, not a tuple of two matrices.
 * **Angles in Underground Fluxes:** ``mtu.calc_u_fluxes()`` no longer takes an ``angles`` argument. The tensor is always returned for the default angles given by ``mtc._ANGLES``.
-* **Energy Grid:** The energy grid can now only be accessed with ``mtc._ENERGIES``, not ``mtc.energies``.
+* **Energy Grid:** The energy grid can now only be accessed with ``mtc.ENERGIES``, not ``mtc.energies``.
 * **Surface Output Files:** The ``surface_fluxes`` directory in ``mute/data/`` has been renamed ``surface`` for more generality. The surface flux file names now contain the month as well (or ``None``) if no month is set.
 * **Print Grid Functions:** The functions that display the grids used in the output files have been removed.
 

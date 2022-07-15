@@ -25,7 +25,7 @@ def test_propagation():
     pp.RandomGenerator.get().set_seed(500)
 
     u_energy_calc = mtp._propagation_loop(
-        mtc._ENERGIES[50], mtc.slant_depths[0], force=True
+        mtc.ENERGIES[50], mtc.slant_depths[0], force=True
     )
     u_energy_read = [8088593.167141137, 7698826.729767787, 7568993.179976861]
 

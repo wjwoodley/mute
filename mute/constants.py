@@ -3,7 +3,7 @@
 ###                   ###
 ###  MUTE             ###
 ###  William Woodley  ###
-###  14 July 2022     ###
+###  15 July 2022     ###
 ###                   ###
 #########################
 #########################
@@ -11,6 +11,7 @@
 # Import packages
 
 import os
+from collections import namedtuple
 
 import numpy as np
 
@@ -18,11 +19,7 @@ import numpy as np
 
 _E_BINS = np.logspace(1.9, 14, 122)[:-30]  # Bin edges
 _E_WIDTHS = np.diff(_E_BINS)  # Bin widths
-
 ENERGIES = np.sqrt(_E_BINS[1:] * _E_BINS[:-1])  # Bin centers
-
-# named tuple
-#constants.energies.centres
 
 # Slant depths in [km.w.e.] and angles in [degrees]
 # These are the defaults used to construct the matrices
@@ -31,7 +28,7 @@ ENERGIES = np.sqrt(_E_BINS[1:] * _E_BINS[:-1])  # Bin centers
 _X_MIN = 0.5
 _X_MAX = 14
 
-_SLANT_DEPTHS = np.linspace(_X_MIN, _X_MAX, int(2*(_X_MAX - _X_MIN) + 1))
+_SLANT_DEPTHS = np.linspace(_X_MIN, _X_MAX, int(2 * (_X_MAX - _X_MIN) + 1))
 _ANGLES = np.degrees(np.arccos(_X_MIN / _SLANT_DEPTHS))
 
 slant_depths = _SLANT_DEPTHS
@@ -39,7 +36,7 @@ angles = _ANGLES
 
 # Angles in [degrees] specifically for the calculation of surface flux matrices
 
-_ANGLES_FOR_S_FLUXES = np.linspace(0, 90, 20)
+ANGLES_FOR_S_FLUXES = np.linspace(0, 90, 20)
 
 # Other constants
 # The rest mass of a muon in [MeV]
@@ -47,8 +44,34 @@ _ANGLES_FOR_S_FLUXES = np.linspace(0, 90, 20)
 
 _MU_MASS = 105.6583745
 
-MONTHS        = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-MONTHS_SNAMES = ["Jan.", "Feb.", "Mar.", "Apr.", "May.", "Jun.", "Jul.", "Aug.", "Sep.", "Oct.", "Nov.", "Dec."]
+MONTHS = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+]
+MONTHS_SNAMES = [
+    "Jan.",
+    "Feb.",
+    "Mar.",
+    "Apr.",
+    "May.",
+    "Jun.",
+    "Jul.",
+    "Aug.",
+    "Sep.",
+    "Oct.",
+    "Nov.",
+    "Dec.",
+]
 
 # Define default user-set global constants
 
@@ -147,10 +170,10 @@ def set_directory(directory):
 
     _directory = directory
 
-    if not os.path.isfile(os.path.join(_directory, "data_20211219.txt")):
+    if not os.path.isfile(os.path.join(_directory, "data_20220715.txt")):
 
         download_file(
-            "https://github.com/wjwoodley/mute/releases/download/0.1.0/data_20211219.zip",
+            "https://github.com/wjwoodley/mute/releases/download/0.1.0/data_20220715.zip",
             _directory,
         )
 
@@ -221,14 +244,20 @@ def set_vertical_depth(vertical_depth):
     # Use the set vertical depth to calculate new slant depths and zenith angles
     # Only do this for flat overburdens
     # For mountains, the slant depths and angles will be calculated in load_mountain()
-    
+
     if vertical_depth < _SLANT_DEPTHS[0] and not shallow_extrapolation:
-        
-        raise Exception("The minimum default available slant depth is 0.5 km.w.e. Set constants.shallow_extrapolation to True to enable calculations for depths lower than 0.5 km.w.e. (not recommended).")
-    
+
+        raise Exception(
+            "The minimum default available slant depth is 0.5 km.w.e. Set constants.shallow_extrapolation to True to enable calculations for depths lower than 0.5 km.w.e. (not recommended)."
+        )
+
     if get_overburden() == "flat":
-        
-        slant_depths = np.sort(np.concatenate(([_vertical_depth], _SLANT_DEPTHS[_SLANT_DEPTHS > _vertical_depth])))
+
+        slant_depths = np.sort(
+            np.concatenate(
+                ([_vertical_depth], _SLANT_DEPTHS[_SLANT_DEPTHS > _vertical_depth])
+            )
+        )
         angles = np.degrees(np.arccos(_vertical_depth / slant_depths))
 
 
@@ -321,7 +350,9 @@ def _check_directory(directory, force=False):
 
         if not force:
 
-            answer = input(f"{directory} does not currently exist. Would you like to create it (y/n)?: ")
+            answer = input(
+                f"{directory} does not currently exist. Would you like to create it (y/n)?: "
+            )
 
         if force or answer.lower() == "y":
 
@@ -361,20 +392,28 @@ def _check_constants(force=False):
 
         assert get_vertical_depth() is not None, "Initial vertical depth must be set."
         assert get_vertical_depth() > 0, "Initial vertical depth must be positive."
-        
-        assert len(slant_depths) == len(angles) and np.allclose(slant_depths, get_vertical_depth()/np.cos(np.radians(angles))), "slant_depths must correspond to angles. Do not assign constants.slant_depths or constants.angles directly. Instead, use constants.set_vertical_depth() in combination with the angles and depths parameters in individual functions. Run constants.clear() to reset the values of slant_depths and/or angles."
-    
+
+        assert len(slant_depths) == len(angles) and np.allclose(
+            slant_depths, get_vertical_depth() / np.cos(np.radians(angles))
+        ), "slant_depths must correspond to angles. Do not assign constants.slant_depths or constants.angles directly. Instead, use constants.set_vertical_depth() in combination with the angles and depths parameters in individual functions. Run constants.clear() to reset the values of slant_depths and / or angles."
+
     # Check that a mountain profile has been loaded, if needed
-    
+
     elif get_overburden() == "mountain":
-        
+
         if not _mountain_loaded:
-            
-            raise Exception("The mountain profile must be loaded first by passing a txt file to constants.load_mountain().")
-    
+
+            raise Exception(
+                "The mountain profile must be loaded first by passing a txt file to constants.load_mountain()."
+            )
+
     else:
-        
-        raise NotImplementedError("Overburdens of type {0} are not available. The only options are \"flat\" and \"mountain\".".format(constants.get_overburden()))
+
+        raise NotImplementedError(
+            'Overburdens of type {0} are not available. The only options are "flat" and "mountain".'.format(
+                constants.get_overburden()
+            )
+        )
 
     # Check that the number of muons is set correctly
 
@@ -386,13 +425,13 @@ def _check_constants(force=False):
 # Load mountain data
 
 
-def load_mountain(file_name, units="kmwe", density = get_density(), max_slant_depth=14):
+def load_mountain(file_name, units="kmwe", density=get_density(), max_slant_depth=14):
 
     """
     Load mountain data from a profile file.
-    
+
     The first column should be the zenith angle in [degrees]; the second column should be the azimuthal angle in [degrees]; the third column should be the slant depth in units of units (see below). This function makes available the variables listed under "Sets" below.
-    
+
     Parameters
     ----------
     file_name : str
@@ -400,72 +439,89 @@ def load_mountain(file_name, units="kmwe", density = get_density(), max_slant_de
 
     units : str, optional (default: "kmwe")
         The units of the slant depths in file_name. This must be one of ["m", "km", "mwe", "kmwe"].
-    
+
     density : float, optional (default: taken from constants.get_density())
         The density in [g cm^-3] of the rock for which the depths are specified in the file.
 
     max_slant_depth : float, optional (default: 14)
         The maximum slant depth in [km.w.e.] to take from the file. Any data for slant depths above this value will be set to 0 km.w.e. and will be ignored throughout calculations. The default is 14 km.w.e., consistent with the maximum slant depth in constants._SLANT_DEPTHS being 14 km.w.e.
-    
+
     Sets
     ----
-    constants.mountain_zenith : NumPy ndarray
+    constants.mountain.zenith : NumPy ndarray
         Unique zenith angles in [degrees] sorted from smallest to largest.
-    
-    constants.mountain_azimuthal : NumPy ndarray
+
+    constants.mountain.azimuthal : NumPy ndarray
         Unique azimuthal angles in [degrees] sorted from smallest to largest.
-    
-    constants.mountain_slants : NumPy ndarray
+
+    constants.mountain.slant_depths : NumPy ndarray
         Unique slant depths in [km.w.e.] in a matrix of shape (len(constants.mountain_zenith), len(constants.mountain_azimuthal)).
     """
 
     # Check values
 
-    assert get_overburden() == "mountain", "The overburden type must be set to \"mountain\"."
-    assert units in ["m", "km", "mwe", "kmwe"], "Units must be \"m\", \"km\", \"mwe\", or \"kmwe\"."
+    assert (
+        get_overburden() == "mountain"
+    ), 'The overburden type must be set to "mountain".'
+    assert units in [
+        "m",
+        "km",
+        "mwe",
+        "kmwe",
+    ], 'Units must be "m", "km", "mwe", or "kmwe".'
 
     # Global variables
-    
-    global _mountain_zenith_all
-    global _mountain_azimuthal_all
-    global _mountain_slants_all
-
-    global mountain_zenith
-    global mountain_azimuthal
-    global mountain_slants
 
     global _mountain_loaded
-    
+    global _mountain_zenith_all
+    global _mountain_azimuthal_all
+    global _mountain_slant_depths_all
+
+    global mountain
+
+    # Create a named tuple to hold immutable results
+
+    Mountain = namedtuple("Mountain", ("zenith", "azimuthal", "slant_depths"))
+
     # If the data is in [m] or [km], convert to [m.w.e.] or [km.w.e.]
 
     density_mult = 1
 
-    if units == "m" or units == "km": density_mult = density / 0.997
+    if units == "m" or units == "km":
+        density_mult = density / 0.997
 
     # If the data is in [m] or [m.w.e.], convert to [km.w.e.]
 
     scale = 1
 
-    if units == "m" or units == "mwe": scale = 1e-3
+    if units == "m" or units == "mwe":
+        scale = 1e-3
 
     # Load the mountain profile data from the file
 
-    _mountain_zenith_all    = np.loadtxt(file_name)[:, 0]
+    _mountain_zenith_all = np.loadtxt(file_name)[:, 0]
     _mountain_azimuthal_all = np.loadtxt(file_name)[:, 1]
-    _mountain_slants_all    = np.loadtxt(file_name)[:, 2] * density_mult * scale
-    
+    _mountain_slant_depths_all = np.loadtxt(file_name)[:, 2] * density_mult * scale
+
     # Extract the unique angles and slant depths
 
-    mountain_zenith    = np.unique(_mountain_zenith_all)
+    mountain_zenith = np.unique(_mountain_zenith_all)
     mountain_azimuthal = np.unique(_mountain_azimuthal_all)
-    mountain_slants    = np.reshape(np.nan_to_num(_mountain_slants_all), (len(mountain_zenith), len(mountain_azimuthal)))
-    
+    mountain_slant_depths = np.reshape(
+        np.nan_to_num(_mountain_slant_depths_all),
+        (len(mountain_zenith), len(mountain_azimuthal)),
+    )
+
     # Remove the slant depths above the maximum slant depth threshold by setting them to 0
-    
-    mountain_slants[mountain_slants > max_slant_depth] = 0
-    
+
+    mountain_slant_depths[mountain_slant_depths > max_slant_depth] = 0
+
+    # Assign the elements of the namedtuple
+
+    mountain = Mountain(mountain_zenith, mountain_azimuthal, mountain_slant_depths)
+
     # If the mountain profile loads successfully, set _mountain_loaded to True
-    
+
     _mountain_loaded = True
 
 
@@ -484,28 +540,30 @@ def clear():
 
     global _E_BINS
     global _E_WIDTHS
-    global _ENERGIES
+    global ENERGIES
     global _X_MIN
     global _X_MAX
     global _SLANT_DEPTHS
     global _ANGLES
     global slant_depths
     global angles
-    global _ANGLES_FOR_S_FLUXES
+    global ANGLES_FOR_S_FLUXES
 
     _E_BINS = np.logspace(1.9, 14, 122)[:-30]  # [MeV]
     _E_WIDTHS = np.diff(_E_BINS)  # [MeV]
-    _ENERGIES = np.sqrt(_E_BINS[1:] * _E_BINS[:-1])  # [MeV]
+    ENERGIES = np.sqrt(_E_BINS[1:] * _E_BINS[:-1])  # [MeV]
     _X_MIN = 0.5  # [km.w.e.]
     _X_MAX = 14  # [km.w.e.]
-    _SLANT_DEPTHS = np.linspace(_X_MIN, _X_MAX, int(2*(_X_MAX - _X_MIN) + 1))  # [km.w.e.]
+    _SLANT_DEPTHS = np.linspace(
+        _X_MIN, _X_MAX, int(2 * (_X_MAX - _X_MIN) + 1)
+    )  # [km.w.e.]
     _ANGLES = np.degrees(np.arccos(0.5 / _SLANT_DEPTHS))  # [degrees]
     slant_depths = _SLANT_DEPTHS  # [km.w.e.]
     angles = _ANGLES  # [degrees]
-    _ANGLES_FOR_S_FLUXES = np.linspace(0, 90, 20)  # [degrees]
-    
+    ANGLES_FOR_S_FLUXES = np.linspace(0, 90, 20)  # [degrees]
+
     # Other constants and variables
-    
+
     global _MU_MASS
     global MONTHS
     global MONTHS_SNAMES
@@ -513,10 +571,36 @@ def clear():
     global _current_survival_probability_tensor
     global _mountain_loaded
     global shallow_extrapolation
-    
+
     _MU_MASS = 105.6583745  # [MeV]
-    MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-    MONTHS_SNAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    MONTHS = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ]
+    MONTHS_SNAMES = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+    ]
     _survival_probability_tensor_configuration = {}
     _current_survival_probability_tensor = None
     _mountain_loaded = False
@@ -546,26 +630,20 @@ def clear():
 
     # Global mountain variables
     # Set the variables to None first, in case they do not already exist in the namespace
-    
+
     global _mountain_zenith_all
     global _mountain_azimuthal_all
-    global _mountain_slants_all
-    global mountain_zenith
-    global mountain_azimuthal
-    global mountain_slants
-    
+    global _mountain_slant_depths_all
+    global mountain
+
     _mountain_zenith_all = None
     _mountain_azimuthal_all = None
-    _mountain_slants_all = None
-    mountain_zenith = None
-    mountain_azimuthal = None
-    mountain_slants = None
-    
+    _mountain_slant_depths_all = None
+    mountain = None
+
     del _mountain_zenith_all
     del _mountain_azimuthal_all
-    del _mountain_slants_all
-    del mountain_zenith
-    del mountain_azimuthal
-    del mountain_slants
-    
+    del _mountain_slant_depths_all
+    del mountain
+
     gc.collect()
