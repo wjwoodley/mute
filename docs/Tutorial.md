@@ -195,16 +195,16 @@ Note that these are immutable objects. They can only be changed by changing the 
 
 ## Calculating Underground Intensities
 
-Underground intensities can be calculated using the function ``mtu.calc_u_intensities()``. This function takes one required argument, ``method``, and many optional keyword arguments.
+Underground intensities can be calculated using the function ``mtu.calc_u_intensities()``. This function takes many optional keyword arguments.
 
 There are four methods available:
 
-* **``"sd"``:** Single differential underground intensities (see [below](#single-differential-underground-intensities)).
+* **``"sd"``:** Single-differential underground intensities (see [below](#single-differential-underground-intensities)).
 * **``"eq"``:** Vertical-equivalent underground intensities (see [below](#vertical-equivalent-underground-intensities)).
 * **``"tr"``:** True vertical underground intensities (see [below](#true-vertical-underground-intensities)).
 * **``"dd"``:** Double-differential underground intensities (see [below](#double-differential-underground-intensities)).
 
-The first three are for flat overburdens, and the last one is for mountain calculations.
+The first three are for flat overburdens (default: ``"sd"``), and the last one is for mountain calculations (default: ``"dd"``).
 
 ### Single-Differential Underground Intensities
 
@@ -266,7 +266,7 @@ This is equivalent to:
 mtu.calc_u_intensities(method = "sd", primary_model = "ZS")
 ```
 
-Which is the most appopriate or efficient depends on the specific use case.
+Which is the most appropriate or efficient depends on the specific use case.
 
 The arguments are listed in their order of precedence. For example, if both ``u_fluxes`` and ``s_fluxes`` are provided, only ``u_fluxes`` will be used, because it is higher in the list than ``s_fluxes``.
 
@@ -492,7 +492,7 @@ $$\Phi_{\mathrm{tot}}^{u}=\int_{\phi_{\mathrm{min}}}^{\phi_{\mathrm{max}}}\int_{
 
 where $\phi_{\mathrm{min}}$, $\phi_{\mathrm{max}}$, $c_{\mathrm{min}}$, and $c_{\mathrm{max}}$ are the minimum and maximum azimuthal and cosine of the zenith angles given in the mountain profile file.
 
-Total underground fluxes can be calculated using the ``mtu.calc_u_tot_fluxes()`` function. Its arguments are similar to those for ``mtu.calc_u_intensities()`` (see [above](#single-differential-underground-intensities)), with some differences. There is no ``method`` argument for this function (for flat overburdens, it will use ``method = "sd"`` to calculate underground intensities, and for mountains, it will use ``method = "dd"``). Additionally, it can take an ``angle`` argument, but not a ``depths`` argument. Lastly, there are no ``output`` or ``file_name`` arguments. Running the line below will use the defaults for all of the arguments:
+Total underground fluxes can be calculated using the ``mtu.calc_u_tot_fluxes()`` function. Its arguments are similar to those for ``mtu.calc_u_intensities()`` (see [above](#single-differential-underground-intensities)), with some differences. There is no ``method`` argument for this function (for flat overburdens, it will use ``method = "sd"`` to calculate underground intensities, and for mountains, it will use ``method = "dd"``). Additionally, it can take an ``angles`` argument, but not a ``depths`` argument. Lastly, there are no ``output`` or ``file_name`` arguments. Running the line below will use the defaults for all of the arguments:
 
 ```python
 mtu.calc_u_tot_fluxes(force = False, s_fluxes = None, survival_probability_tensor = None, angles = mtc.angles, E_th = 0, primary_model = "GSF", interaction_model = "SIBYLL-2.3c", atmosphere = "CORSIKA", location = "USStd", month = None)

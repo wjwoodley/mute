@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.1](https://github.com/wjwoodley/mute/releases/tag/2.0.1) - 17 November 2022
+
+### **Bug Fixes**
+
+* **PROPOSAL Version:** The suggested PROPOSAL version has been updated to v7.4.2. The previously-suggested v7.1.1 sometimes returns an error when calculating new transfer tensors.
+
+### **Other Changes**
+
+* **Intensities Method:** The ``method`` argument is now an optional argument in the ``mtu.calc_u_intensities()`` function. The default for flat overburdens is ``"sd"``, and the default for mountains is ``"dd"``. Other methods can still be specified as normal, and this should not change any existing scripts. See the [Tutorial](docs/Tutorial.md#calculating-underground-intensities) or the function docstrings for more information.
+* **Default Interaction Model:** In the next release of MUTE, the default interaction model will be changed from SIBYLL-2.3c to DDM.
+
 ## [2.0.0](https://github.com/wjwoodley/mute/releases/tag/2.0.0) - 15 July 2022
 
 ### **New Features**

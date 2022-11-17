@@ -19,10 +19,10 @@ This will install most of the requirements, including MCEq.
 In order to generate custom survival probability tensors, PROPOSAL should be installed. Because it requires compilation, it needs to be installed separately (see detailed installation instructions [here](https://github.com/tudo-astroparticlephysics/PROPOSAL/blob/master/INSTALL.md)):
 
 ```
-pip install proposal==7.1.1
+pip install proposal==7.4.2
 ```
 
-MUTE has been tested with PROPOSAL v7.1.1; earlier or later versions are not guaranteed to work. Environment set-up help for PROPOSAL installation on a Mac can be found [here](docs/Installing_PROPOSAL_on_a_Mac.md).
+MUTE has been tested with PROPOSAL v7.4.2; earlier or later versions are not guaranteed to work. Environment set-up help for PROPOSAL installation on a Mac can be found [here](docs/Installing_PROPOSAL_on_a_Mac.md).
 
 ## Getting Started
 

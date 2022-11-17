@@ -39,10 +39,10 @@ python -v
 
 ## Install PROPOSAL
 
-MUTE has been tested with PROPOSAL v7.1.1; earlier or later versions are not guaranteed to work.
+MUTE has been tested with PROPOSAL v7.4.2; earlier or later versions are not guaranteed to work.
 
 ```
-python3 -m pip install proposal==7.1.1
+python3 -m pip install proposal==7.4.2
 ```
 
 Verify that PROPOSAL imports properly in Python:
