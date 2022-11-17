@@ -1,12 +1,12 @@
-#########################
-#########################
-###                   ###
-###  MUTE             ###
-###  William Woodley  ###
-###  15 July 2022     ###
-###                   ###
-#########################
-#########################
+##########################
+##########################
+###                    ###
+###  MUTE              ###
+###  William Woodley   ###
+###  17 November 2022  ###
+###                    ###
+##########################
+##########################
 
 # Import packages
 
@@ -312,14 +312,14 @@ def _create_interpolator(u_intensities):
 # Calculate the underground intensities
 
 
-def calc_u_intensities(method, output=None, file_name="", force=False, **kwargs):
+def calc_u_intensities(method=None, output=None, file_name="", force=False, **kwargs):
 
     """
     Calculate underground intensities in units of [(cm^2 s sr)^-1].
 
     Parameters
     ----------
-    method : str
+    method : str, optional (default: "sd" if overburden is flat and "dd" if overburden is mountain)
         The type of underground intensities to calculate. Options:
         sd = Single-differential underground intensities for flat overburdens
         eq = Vertical-equivalent underground intensities for flat overburdens
@@ -387,9 +387,12 @@ def calc_u_intensities(method, output=None, file_name="", force=False, **kwargs)
 
     constants._check_constants()
 
-    method = method.lower()
+    if type(method) == str:
+
+        method = method.lower()
 
     assert method in [
+        None,
         "sd",
         "eq",
         "tr",
@@ -398,6 +401,16 @@ def calc_u_intensities(method, output=None, file_name="", force=False, **kwargs)
         method,
         "https://github.com/wjwoodley/mute/blob/main/docs/Tutorial.md#calculating-underground-intensities",
     )
+
+    if method is None:
+
+        if constants.get_overburden() == "flat":
+
+            method = "sd"
+
+        else:
+
+            method = "dd"
 
     if output is None:
         output = constants.get_output()
