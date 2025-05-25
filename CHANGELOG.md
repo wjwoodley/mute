@@ -1,4 +1,47 @@
-# Changelog
+# **Changelog**
+
+## [3.0.0](https://github.com/wjwoodley/mute/releases/tag/3.0.0) - 24 May 2025
+
+### **New Features**
+
+* **daemonflux:** [daemonflux](https://github.com/mceq-project/daemonflux) can now be used from within the MUTE framework to calculate suface fluxes. Because either daemonflux or MCEq can be used, a new argument ``model`` has been added to ``surface`` and ``underground`` functions to specify which is to be used (default: ``mceq``; in the next release, the default will become ``daemonflux``).
+* **New Functions:** A number of new functions can now be used.
+  * **``mts.calc_s_e_spect()``:** Calculates surface energy spectra.
+  * **``mtu.calc_u_ang_dist()``:** Calculates underground zenith or azimuthal angular distributions (for mountain overburdens only, since the distributions are trivial for flat overburdens).
+  * **``mtu.calc_u_e_spect()``:** Calculates underground energy spectra.
+  * **``mtu.calc_u_mean_e()``:** Calculates underground mean and median energies, as well as upper and lower 68% and 95% confidence intervals for the median.
+  * **``mtu.calc_depth()``:** Calculates various depths (equivalent vertical, straight vertical, minimum, maximum, and average) for mountain overburdens.
+  * A number of new examples have been added to [``/examples``](examples) to demonstrate use of these functions.
+* **Provided Mountain Maps:** Mountain maps for various laboratories are now provided (Y2L, Super-Kamiokande, KamLAND, LSM, LNGS, and CJPL). See [``Tutorial_Labs``](/docs/Tutorial_Labs.md) for information on use.
+* **New Propagation Media:** A number of new propagation medium options, corresponding to different underground and underwater laboratories, are now available in addition to standard rock. ANTARES water is now available as a propagation medium. The ice propagation medium is now an alias for (fresh) water. New transfer tensors for these media are provided in the supplied data files. See [``Tutorial_Labs``](/docs/Tutorial_Labs.md) for information on use. Air is no longer available as a propagation medium.
+* **Location Coordinates:** Locations for MCEq can now be set by passing in (latitude, longitude) tuples (in degrees) into the ``location`` parameter in any function.
+* **Loading Mountains:** New parameters are available when loading mountains, including the ``scale`` parameter, which can be used to scale all slant depths in the loaded mountain map by some ratio (useful for calculating uncertainties, for example).
+* **Loading Surface Fluxes with Files:** Surface fluxes can now be loaded from user-named files by passing the file name into the ``file_name`` parameter in the ``mts.load_s_fluxes_from_file()`` function.
+
+### **Bug Fixes**
+
+* **Intensity Calculation:** A bug in the calculation of intensities for mountains was corrected using a new calculation method. The new results differ from those returned by MUTE v2 by less than 7% at the deepest depths.
+* **Loading Transfer Tensors:** Transfer tensors can now be loaded successfully when passing a file name to ``mtp.load_survival_probability_tensor_from_file()``.
+* **NumPy and SciPy:** MUTE function calls to NumPy and SciPy have been updated to correspond with the latest versions of these libraries.
+
+### **Other Changes**
+
+* **Number of Muons:** The default value for ``n_muon`` is now ``1e6`` instead of ``1e5``. New transfer tensors for 1e6 muons are provided in the supplied data files.
+* **Lowercase Letters:** Most elements of all file names, as well as some arguments, are now lowercase. Interaction models also now have their dashes and periods removed if passed into functions with dashes and periods. This is backwards-compatible. For example, user-input ``"SIBYLL-2.3d"`` is now turned into ``"sibyll23d"`` in all cases. Note that the location arguments, including ``"USStd"``, are case-sensitive, as are month arguments, including ``None``, as these arguments are passed directly into MCEq. New file names in lowercase are provided in the supplied data files, and old files have been removed (though will persist in the data directory if MUTE is updated over a previous installation).
+* **Vertical Depths for Mountains:** An exception is now thrown when attempting to set a vertical depth while the overburden type is set to mountain. This alerts the user that they are possibly in a different overburden mode from intended.
+* **Changing the Overburden Type:** When the overburden type is changed, the set and loaded constants specific to flat or mountain overburdens are now reset (meaning, if, for example, the overburden type is ``"flat"`` and the vertical depth is set to 3.0 km.w.e., then the overburden type is changed to ``"mountain"``, then changed back to ``"flat"``, the vertical depth will be reset to 0.5 km.w.e.).
+* **Transfer Tensor Files:** Transfer tensors are now stored in ``.npy`` files instead of plain text files in order to save disk space.
+* **Documentation:** The tutorial has now been split up into different files for better organisation and easier navigation.
+* **ASCII Art:** The ``__init__.py`` file now prints ASCII art when a MUTE module is imported for the first time.
+* **Default Interaction Model:** In the [previous release of MUTE](https://github.com/wjwoodley/mute/releases/tag/2.0.1), it was stated that the default interaction model would be changed from SIBYLL-2.3c to DDM. Instead, the default interaction model remains SIBYLL-2.3c. Although SIBYLL-2.3d and DDM are now available to be used in MCEq, SIBYLL-2.3c is still the most recent model for which all features in MUTE are available, particularly calculating surface fluxes with the NRLMSISE-00 atmosphere in order to specify location and month.
+
+### **Deprecations and Upcoming Changes**
+
+* **Energy Units:** In the next release (v3.1.0), the energy units in all cases will change from [MeV] to [GeV].
+* **Setting Densities:** The ``mtc.set_density()`` and ``mtc.get_density()`` functions have been renamed ``mtc.set_reference_density()`` and ``mtc.get_reference_density()`` respectively. The former will be removed in the next release (v3.1.0).
+* **Default Surface Flux Model:** In the next release (v3.1.0), the default surface flux model set by the ``model`` parameter will be changed to ``daemonflux`` (it is currently ``"mceq"``).
+* **Hillas-Gaisser Model Parameters:** The ``"hg"`` primary model option has been split into ``"h3a"`` and ``"h4a"`` to refer to the three- and four-component Hillas-Gaisser primary flux models. The former is now deprecated and will be removed in the next release (v3.1.0). This is to conform to naming conventions within the cosmic ray community.
+* **File Name Parameters:** In the next release (v3.1.0), file name parameters previously called ``file_name`` will be called ``input_file`` and ``output_file`` to remove ambiguity.
 
 ## [2.0.1](https://github.com/wjwoodley/mute/releases/tag/2.0.1) - 17 November 2022
 

@@ -3,7 +3,7 @@
 ###                   ###
 ###  MUTE             ###
 ###  William Woodley  ###
-###  15 July 2022     ###
+###  24 May 2025      ###
 ###                   ###
 #########################
 #########################
@@ -12,8 +12,11 @@
 
 import os
 from collections import namedtuple
+import warnings
 
 import numpy as np
+
+warnings.simplefilter("always")
 
 # Energies in [MeV]
 
@@ -82,8 +85,20 @@ _lab = "Default"
 _overburden = "flat"
 _vertical_depth = _X_MIN
 _medium = "rock"
-_density = 2.65
-_n_muon = 100000
+_reference_density = 2.65
+_n_muon = 1000000
+
+# Define which media are accepted in MUTE
+
+_accepted_media = [
+    "rock",
+    "frejus_rock",
+    "y2l_rock",
+    "salt",
+    "water",
+    "antares_water",
+    "ice",
+]
 
 # Keep track of which survival probability tensor is loaded
 
@@ -105,7 +120,6 @@ shallow_extrapolation = False
 
 
 def set_verbose(verbose):
-
     """
     Set the verbosity level.
 
@@ -126,7 +140,6 @@ def set_verbose(verbose):
 
 
 def get_verbose():
-
     """Return the set verbosity level."""
 
     return _verbose
@@ -136,7 +149,6 @@ def get_verbose():
 
 
 def set_output(output):
-
     """
     Set whether results are output to files or not. The default is True.
 
@@ -151,7 +163,6 @@ def set_output(output):
 
 
 def get_output():
-
     """Return the set output setting."""
 
     return _output
@@ -161,25 +172,23 @@ def get_output():
 
 
 def set_directory(directory):
-
     """Set the working directory for files to be written to and read from. The default is \"data\"."""
 
-    from .__init__ import download_file
+    from .__init__ import download_file, GitHub_data_file
 
     global _directory
 
     _directory = directory
 
-    if not os.path.isfile(os.path.join(_directory, "data_20220715.txt")):
+    if not os.path.isfile(os.path.join(_directory, "data", f"{GitHub_data_file}.txt")):
 
         download_file(
-            "https://github.com/wjwoodley/mute/releases/download/0.1.0/data_20220715.zip",
+            f"https://github.com/wjwoodley/mute/releases/download/0.1.0/{GitHub_data_file}.zip",
             _directory,
         )
 
 
 def get_directory():
-
     """Return the set working directory for files to be written to and read from."""
 
     return _directory
@@ -189,7 +198,6 @@ def get_directory():
 
 
 def set_lab(lab):
-
     """Set the name of the lab. This is used in the output file names in the \"underground\" data directory as a way to differentiate different data files. The default is \"Default\"."""
 
     global _lab
@@ -198,7 +206,6 @@ def set_lab(lab):
 
 
 def get_lab():
-
     """Return the set name of the lab."""
 
     return _lab
@@ -208,7 +215,6 @@ def get_lab():
 
 
 def set_overburden(overburden):
-
     """Set the overburden type. The default is  \"flat\" overburden."""
 
     assert overburden in [
@@ -218,11 +224,47 @@ def set_overburden(overburden):
 
     global _overburden
 
+    # Clear constants when switching overburden types
+
+    if _overburden == "mountain" and overburden == "flat":
+
+        if get_verbose() > 1:
+            print(
+                "Setting overburden to flat and resetting mountain overburden constants."
+            )
+
+        global _mountain_zenith_all
+        global _mountain_azimuthal_all
+        global _mountain_slant_depths_all
+        global mountain
+
+        _mountain_zenith_all = None
+        _mountain_azimuthal_all = None
+        _mountain_slant_depths_all = None
+        mountain = None
+
+        del _mountain_zenith_all
+        del _mountain_azimuthal_all
+        del _mountain_slant_depths_all
+        del mountain
+
+    elif _overburden == "flat" and overburden == "mountain":
+
+        if get_verbose() > 1:
+            print(
+                "Setting overburden to mountain and resetting flat overburden constants."
+            )
+
+        global _vertical_depth
+
+        _vertical_depth = _X_MIN
+
+    # Set the overburden
+
     _overburden = overburden
 
 
 def get_overburden():
-
     """Return the set overburden type."""
 
     return _overburden
@@ -232,8 +274,15 @@ def get_overburden():
 
 
 def set_vertical_depth(vertical_depth):
-
     """Set the vertical depth, h. The default is 0.5 km.w.e."""
+
+    if get_overburden() == "mountain":
+
+        raise Exception(
+            'The vertical depth has not been changed because the overburden type is currently set to "mountain". Please either use the constants.load_mountain() function to change the mountain profile or change the overburden type to "flat" with constants.set_overburden().'
+        )
+
+        return
 
     global _vertical_depth
     global slant_depths
@@ -245,7 +294,7 @@ def set_vertical_depth(vertical_depth):
     # Only do this for flat overburdens
     # For mountains, the slant depths and angles will be calculated in load_mountain()
 
-    if vertical_depth < _SLANT_DEPTHS[0] and not shallow_extrapolation:
+    if vertical_depth < _X_MIN and not shallow_extrapolation:
 
         raise Exception(
             "The minimum default available slant depth is 0.5 km.w.e. Set constants.shallow_extrapolation to True to enable calculations for depths lower than 0.5 km.w.e. (not recommended)."
@@ -262,8 +311,13 @@ def set_vertical_depth(vertical_depth):
 
 
 def get_vertical_depth():
-
     """Return the set vertical depth."""
+
+    if get_overburden() == "mountain":
+
+        print('The overburden type is set to "mountain".')
+
+        return
 
     return _vertical_depth
 
@@ -272,15 +326,9 @@ def get_vertical_depth():
 
 
 def set_medium(medium):
-
     """Set the medium for the muons to be propagated through. The default is standard rock (\"rock\")."""
 
-    assert medium in [
-        "rock",
-        "water",
-        "ice",
-        "air",
-    ], 'medium must be set to "rock", "water", "ice", or "air".'
+    assert medium in _accepted_media, f"medium must be set to one of {_accepted_media}."
 
     global _medium
 
@@ -288,38 +336,63 @@ def set_medium(medium):
 
 
 def get_medium():
-
     """Return the set propagation medium."""
 
     return _medium
 
 
-# Density in [gcm^-3]
+# Reference density in [gcm^-3]
 
 
 def set_density(density):
 
-    """Set the density of the propagation medium. The default is 2.65 gcm^-3 (the density of standard rock)."""
+    warnings.warn(
+        "set_density() is deprecated. This function will be removed in v3.1.0. Please use set_reference_density().",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
-    assert density > 0, "Media density must be positive."
-
-    global _density
-
-    _density = density
+    set_reference_density(density)
 
 
 def get_density():
 
-    """Return the set density of the propagation medium."""
+    warnings.warn(
+        "get_density() is deprecated. This function will be removed in v3.1.0. Please use get_reference_density().",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
-    return _density
+    return get_reference_density()
+
+
+def set_reference_density(reference_density):
+    """Set the reference density of the propagation medium. The default is 2.65 gcm^-3 (the density of standard rock)."""
+
+    assert reference_density > 0, "Media density must be positive."
+
+    global _reference_density
+
+    if reference_density != 2.65 and get_verbose() >= 1:
+
+        warnings.warn(
+            "Changing the reference density will trigger the computation of new transfer tensors (for advanced users).",
+            stacklevel=2,
+        )
+
+    _reference_density = reference_density
+
+
+def get_reference_density():
+    """Return the set reference density of the propagation medium."""
+
+    return _reference_density
 
 
 # Number of muon
 
 
 def set_n_muon(n_muon):
-
     """Set the number of muons to be propagated per surface energy-slant depth bin. The default is 100000, as the provided default survival probability tensors in the data directory are given for 100000 muons."""
 
     assert isinstance(n_muon, int), "Number of muons must be an integer."
@@ -331,7 +404,6 @@ def set_n_muon(n_muon):
 
 
 def get_n_muon():
-
     """Return the set number of muons to be propagated per surface energy-slant depth bin."""
 
     return _n_muon
@@ -341,7 +413,6 @@ def get_n_muon():
 
 
 def _check_directory(directory, force=False):
-
     """This function checks whether a directory required to store output files exists or not. If it does not, ask the user if it should be created."""
 
     if not os.path.exists(directory):
@@ -362,18 +433,11 @@ def _check_directory(directory, force=False):
 
             print("Directory not created.")
 
-            return
-
-    else:
-
-        return
-
 
 # Check that the constants are set to correctly before running any calculation functions
 
 
 def _check_constants(force=False):
-
     """This function checks that the constants are set correctly before running any calculation functions."""
 
     # Check that the working directory the user has set exists
@@ -425,10 +489,11 @@ def _check_constants(force=False):
 # Load mountain data
 
 
-def load_mountain(file_name, units="kmwe", density=get_density(), max_slant_depth=14):
-
+def load_mountain(
+    file_name, file_units="kmwe", rock_density=None, scale=1, max_slant_depth=14
+):
     """
-    Load mountain data from a profile file.
+    Load data from a mountain profile file.
 
     The first column should be the zenith angle in [degrees]; the second column should be the azimuthal angle in [degrees]; the third column should be the slant depth in units of units (see below). This function makes available the variables listed under "Sets" below.
 
@@ -437,11 +502,14 @@ def load_mountain(file_name, units="kmwe", density=get_density(), max_slant_dept
     file_name : str
         The full path and name of the .txt file containing the profile information of the mountain.
 
-    units : str, optional (default: "kmwe")
+    file_units : str, optional (default: "kmwe")
         The units of the slant depths in file_name. This must be one of ["m", "km", "mwe", "kmwe"].
 
-    density : float, optional (default: taken from constants.get_density())
-        The density in [g cm^-3] of the rock for which the depths are specified in the file.
+    rock_density : float, optional (default: taken from constants.get_reference_density())
+        The density in [g cm^-3] of the rock above the lab if the file slant depth units are in [m] or [km].
+
+    scale : float, optional (default: 1)
+        The amount by which to scale the slant depths. This is useful if the slant depths in the file were calculated using a density other than the desired density. It can also be used to vary the slant depths within some uncertainty range.
 
     max_slant_depth : float, optional (default: 14)
         The maximum slant depth in [km.w.e.] to take from the file. Any data for slant depths above this value will be set to 0 km.w.e. and will be ignored throughout calculations. The default is 14 km.w.e., consistent with the maximum slant depth in constants._SLANT_DEPTHS being 14 km.w.e.
@@ -463,12 +531,51 @@ def load_mountain(file_name, units="kmwe", density=get_density(), max_slant_dept
     assert (
         get_overburden() == "mountain"
     ), 'The overburden type must be set to "mountain".'
-    assert units in [
+    assert isinstance(file_name, str), "file_name must be a string."
+    assert file_units in [
         "m",
         "km",
         "mwe",
         "kmwe",
     ], 'Units must be "m", "km", "mwe", or "kmwe".'
+
+    if (file_units == "m" or file_units == "km") and rock_density is None:
+
+        raise ValueError(
+            "rock_density must be specified when units are {0}.".format(file_units)
+        )
+
+    elif (file_units == "mwe" or file_units == "kmwe") and rock_density is not None:
+
+        raise ValueError(
+            'rock_density should only be set if file_units is "m" or "km".'
+        )
+
+    # Check for use of provided profiles
+
+    provided_profiles = {
+        "y2l": "",
+        "superk": 'https://inspirehep.net/literature/824640, https://inspirehep.net/literature/607144, and "Digital Map 50 m Grid (Elevation), Geographical Survey Institute of Japan (1997)."',
+        "kamland": 'https://inspirehep.net/literature/824640 and "Digital Map 50 m Grid (Elevation), Geographical Survey Institute of Japan (1997)."',
+        "lngs": "https://inspirehep.net/literature/471316.",
+        "lsm": "https://inspirehep.net/literature/26080.",
+        "cjpl": "https://inspirehep.net/literature/1809695.",
+    }  # Wait for email
+
+    file_name_path = file_name
+
+    if file_name.lower() in provided_profiles.keys():
+
+        file_name_path = os.path.join(
+            get_directory(), "mountains", file_name.lower() + "_mountain.txt"
+        )
+
+        if get_verbose() >= 1 and file_name.lower() != "y2l":
+            print(
+                "For use of the {0} mountain profile, please cite {1}".format(
+                    file_name, provided_profiles[file_name.lower()]
+                )
+            )
 
     # Global variables
 
@@ -483,25 +590,45 @@ def load_mountain(file_name, units="kmwe", density=get_density(), max_slant_dept
 
     Mountain = namedtuple("Mountain", ("zenith", "azimuthal", "slant_depths"))
 
-    # If the data is in [m] or [km], convert to [m.w.e.] or [km.w.e.]
+    # If the file slant depths are in [m] or [km], convert to [m.w.e.] or [km.w.e.]
+    # Also convert between rock densities if necessary
 
     density_mult = 1
 
-    if units == "m" or units == "km":
-        density_mult = density / 0.997
+    if file_units == "m" or file_units == "km":
 
-    # If the data is in [m] or [m.w.e.], convert to [km.w.e.]
+        if get_verbose() > 1:
+            print(
+                "Multiplying slant depths by {0} gcm^-3 to convert to water-equivalent units.".format(
+                    rock_density, file_units
+                )
+            )
 
-    scale = 1
+        density_mult = rock_density
 
-    if units == "m" or units == "mwe":
-        scale = 1e-3
+    # If the file slant depths are in [m] or [m.w.e.], convert to [km.w.e.]
+
+    km_scale = 1
+
+    if file_units == "m" or file_units == "mwe":
+
+        if get_verbose() > 1:
+            print(f"Converting slant depths from [{file_units}] to [km.w.e.].")
+
+        km_scale = 1e-3
+
+    # Scale the slant depths by user-defined scale
+
+    if scale != 1 and get_verbose() > 1:
+        print(f"Scaling slant depths by a factor of {scale}.")
 
     # Load the mountain profile data from the file
 
-    _mountain_zenith_all = np.loadtxt(file_name)[:, 0]
-    _mountain_azimuthal_all = np.loadtxt(file_name)[:, 1]
-    _mountain_slant_depths_all = np.loadtxt(file_name)[:, 2] * density_mult * scale
+    _mountain_zenith_all = np.loadtxt(file_name_path)[:, 0]
+    _mountain_azimuthal_all = np.loadtxt(file_name_path)[:, 1]
+    _mountain_slant_depths_all = (
+        np.loadtxt(file_name_path)[:, 2] * density_mult * km_scale * scale
+    )
 
     # Extract the unique angles and slant depths
 
@@ -529,7 +656,6 @@ def load_mountain(file_name, units="kmwe", density=get_density(), max_slant_dept
 
 
 def clear():
-
     """Reset all of the values set or calculated in MUTE to their default values."""
 
     # Import packages
@@ -567,6 +693,7 @@ def clear():
     global _MU_MASS
     global MONTHS
     global MONTHS_SNAMES
+    global _accepted_media
     global _survival_probability_tensor_configuration
     global _current_survival_probability_tensor
     global _mountain_loaded
@@ -588,18 +715,27 @@ def clear():
         "December",
     ]
     MONTHS_SNAMES = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
+        "Jan.",
+        "Feb.",
+        "Mar.",
+        "Apr.",
+        "May.",
+        "Jun.",
+        "Jul.",
+        "Aug.",
+        "Sep.",
+        "Oct.",
+        "Nov.",
+        "Dec.",
+    ]
+    _accepted_media = [
+        "rock",
+        "frejus_rock",
+        "y2l_rock",
+        "salt",
+        "water",
+        "antares_water",
+        "ice",
     ]
     _survival_probability_tensor_configuration = {}
     _current_survival_probability_tensor = None
@@ -615,7 +751,7 @@ def clear():
     global _overburden
     global _vertical_depth
     global _medium
-    global _density
+    global _reference_density
     global _n_muon
 
     _verbose = 2
@@ -625,8 +761,8 @@ def clear():
     _overburden = "flat"
     _vertical_depth = _X_MIN
     _medium = "rock"
-    _density = 2.65
-    _n_muon = 100000
+    _reference_density = 2.65
+    _n_muon = 1000000
 
     # Global mountain variables
     # Set the variables to None first, in case they do not already exist in the namespace
@@ -647,3 +783,6 @@ def clear():
     del mountain
 
     gc.collect()
+
+    if get_verbose() > 1:
+        print("Reset global constants to their default values.")

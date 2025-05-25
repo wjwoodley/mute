@@ -27,6 +27,6 @@ def test_propagation():
     u_energy_calc = mtp._propagation_loop(
         mtc.ENERGIES[50], mtc.slant_depths[0], force=True
     )
-    u_energy_read = [8088593.167141137, 7698826.729767787, 7568993.179976861]
+    u_energy_read = [8088234.57870225, 7698468.554854496, 7568635.147518327]
 
     assert np.allclose(u_energy_calc, u_energy_read)

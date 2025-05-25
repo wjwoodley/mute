@@ -3,7 +3,7 @@
 ###                   ###
 ###  MUTE             ###
 ###  William Woodley  ###
-###  15 July 2022     ###
+###  24 May 2025      ###
 ###                   ###
 #########################
 #########################
@@ -29,7 +29,6 @@ except ImportError:
 
 
 def _create_propagator(force):
-
     """This function creates the propagator object in PROPOSAL for use in propagation._propagation_loop()"""
 
     # Check values
@@ -50,27 +49,31 @@ def _create_propagator(force):
     mu = pp.particle.MuMinusDef()
     cuts = pp.EnergyCutSettings(500, 0.05, True)
 
-    if constants.get_medium() == "rock":
+    if constants.get_medium() == "rock" or constants.get_medium() == "y2l_rock":
 
         medium = pp.medium.StandardRock()
 
-    elif constants.get_medium() == "water":
+    elif constants.get_medium() == "frejus_rock":
+
+        medium = pp.medium.FrejusRock()
+
+    elif constants.get_medium() == "salt":
+
+        medium = pp.medium.Salt()
+
+    elif constants.get_medium() == "water" or constants.get_medium() == "ice":
 
         medium = pp.medium.Water()
 
-    elif constants.get_medium() == "ice":
+    elif constants.get_medium() == "antares_water":
 
-        medium = pp.medium.Ice()
-
-    elif constants.get_medium() == "air":
-
-        medium = pp.medium.Air()
+        medium = pp.medium.AntaresWater()
 
     else:
 
         raise NotImplementedError(
-            "Medium type {0} not implemented. The only options are {1}, {2}, {3}, and {4}.".format(
-                constants.get_medium(), "rock", "water", "ice", "air"
+            "Medium type {0} not implemented. The only options are {1}.".format(
+                constants.get_medium(), constants._accepted_media
             )
         )
 
@@ -116,7 +119,7 @@ def _create_propagator(force):
         position=pp.Cartesian3D(0, 0, 0), radius=10000000, inner_radius=0
     )
     density_distr = pp.density_distribution.density_homogeneous(
-        mass_density=constants.get_density()
+        mass_density=constants.get_reference_density()
     )
 
     propagator = pp.Propagator(mu, [(detector, utility, density_distr)])
@@ -131,7 +134,6 @@ def _create_propagator(force):
 
 
 def _propagation_loop(energy, slant_depth, force):
-
     """This function propagates n_muon muons, looping over the energies and slant depths, and returns the muons' underground energies in [MeV]."""
 
     # Check values
@@ -142,7 +144,7 @@ def _propagation_loop(energy, slant_depth, force):
 
     # Convert the slant depth from [km.w.e.] to [cm]
 
-    convert_to_cm = 1e5 * 0.997 / constants.get_density()
+    convert_to_cm = 1e5 / constants.get_reference_density()
 
     # Initialise a list of underground energies
 
@@ -185,7 +187,6 @@ def _propagation_loop(energy, slant_depth, force):
 
 
 def propagate_muons(seed=0, job_array_number=0, output=None, force=False):
-
     """
     Propagate muons for the default surface energy grid and slant depths.
 
@@ -272,9 +273,9 @@ def propagate_muons(seed=0, job_array_number=0, output=None, force=False):
         file_name = os.path.join(
             constants.get_directory(),
             "underground_energies",
-            "{0}_{1}_{2}_Underground_Energies_{3}.npy".format(
+            "{0}_{1}_{2}_underground_energies_{3}.npy".format(
                 constants.get_medium(),
-                constants.get_density(),
+                constants.get_reference_density(),
                 constants.get_n_muon(),
                 job_array_number,
             ),
@@ -292,7 +293,6 @@ def propagate_muons(seed=0, job_array_number=0, output=None, force=False):
 
 
 def _load_u_energies_from_files(file_name_pattern, n_job=1, force=False):
-
     """
     Load the underground energies resulting from the PROPOSAL Monte Carlo from a file or collection of files stored in data/underground_energies.
 
@@ -374,7 +374,6 @@ def _load_u_energies_from_files(file_name_pattern, n_job=1, force=False):
 def calc_survival_probability_tensor(
     seed=0, file_name_pattern=None, n_job=1, output=None, file_name="", force=False
 ):
-
     """
     Calculate survival probabilities in units of [(MeV^2 km.w.e.)^-1] for the default surface energy grid and slant depths.
 
@@ -385,7 +384,7 @@ def calc_survival_probability_tensor(
     seed : int, optional (default: 0)
         The random seed for use in the PROPOSAL propagator.
 
-    file_name_pattern : str, optional
+    file_name_pattern : str, optional (default: None)
         The file name pattern for the file(s) that the underground energy data is stored in. This should end before an underscore so the function can append the job array number. For example, pass "underground_energies" for a set of files beginning with "underground_energies_0.npy".
 
     n_job : int, optional (default: 1)
@@ -416,9 +415,9 @@ def calc_survival_probability_tensor(
     file_name_pattern_default = os.path.join(
         constants.get_directory(),
         "underground_energies",
-        "{0}_{1}_{2}_Underground_Energies".format(
+        "{0}_{1}_{2}_underground_energies".format(
             constants.get_medium(),
-            constants.get_density(),
+            constants.get_reference_density(),
             int(constants.get_n_muon() / n_job),
         ),
     )
@@ -521,31 +520,14 @@ def calc_survival_probability_tensor(
             file_name = os.path.join(
                 constants.get_directory(),
                 "survival_probabilities",
-                "{0}_{1}_{2}_Survival_Probabilities.txt".format(
+                "{0}_{1}_{2}_survival_probabilities.npy".format(
                     constants.get_medium(),
-                    constants.get_density(),
+                    constants.get_reference_density(),
                     constants.get_n_muon(),
                 ),
             )
 
-        file_out = open(file_name, "w")
-
-        for i in range(len(constants.ENERGIES)):
-
-            for x in range(len(constants._SLANT_DEPTHS)):
-
-                for u in range(len(constants.ENERGIES)):
-
-                    file_out.write(
-                        "{0:1.14f} {1:1.5f} {2:1.14f} {3:1.14e}\n".format(
-                            constants.ENERGIES[i],
-                            constants._SLANT_DEPTHS[x],
-                            constants.ENERGIES[u],
-                            survival_probability_tensor[i, x, u],
-                        )
-                    )
-
-        file_out.close()
+        np.save(file_name, survival_probability_tensor)
 
         if constants.get_verbose() > 1:
             print(f"Survival probabilities written to {file_name}.")
@@ -554,7 +536,6 @@ def calc_survival_probability_tensor(
 
 
 def load_survival_probability_tensor_from_file(file_name="", force=False):
-
     """
     Retrieve a survival probability tensor in units of [(MeV^2 km.w.e.)^-1] stored in data/survival_probabilities based on the set global propagation constants.
 
@@ -563,7 +544,7 @@ def load_survival_probability_tensor_from_file(file_name="", force=False):
     Parameters
     ----------
     file_name : str, optional (default: constructed from set global propagation constants)
-        The name of the file in which to store the results. If output is False or None, this is ignored.
+        The name of the file in which to store the results. This must be the full path to the file. If output is False or None, this is ignored.
 
     force : bool
         If True, force the calculation of a new survival probability tensor and the creation of new directories if required.
@@ -578,38 +559,13 @@ def load_survival_probability_tensor_from_file(file_name="", force=False):
 
     constants._check_constants(force=force)
 
-    # Check if a survival probability tensor has already been loaded
-    # If so, return the tensor that has already been loaded
-    # If not, load a tensor based on the set global propagation constants
-
-    if (
-        constants._current_survival_probability_tensor is not None
-        and constants._survival_probability_tensor_configuration
-        == {
-            "medium": constants.get_medium(),
-            "density": constants.get_density(),
-            "n_muon": constants.get_n_muon(),
-        }
-    ):
-
-        if constants.get_verbose() > 1:
-            print(
-                "Survival probabilities already loaded for {0} with density {1} gcm^-3 and {2} muons.".format(
-                    constants._survival_probability_tensor_configuration["medium"],
-                    constants._survival_probability_tensor_configuration["density"],
-                    constants._survival_probability_tensor_configuration["n_muon"],
-                )
-            )
-
-        return constants._current_survival_probability_tensor
-
     # Define a function to update the survival probability tensor cache
 
     def update_cache(survival_probability_tensor):
 
         constants._survival_probability_tensor_configuration = {
             "medium": constants.get_medium(),
-            "density": constants.get_density(),
+            "density": constants.get_reference_density(),
             "n_muon": constants.get_n_muon(),
         }
         constants._current_survival_probability_tensor = survival_probability_tensor
@@ -641,57 +597,74 @@ def load_survival_probability_tensor_from_file(file_name="", force=False):
             return
 
     # Construct a file name based on the set medium, density, and number of muons if one has not been provided
+    # Then update the cache
+    # If a file name has been provided, use that and do not update the cache
 
     if file_name == "" or not isinstance(file_name, str):
 
-        file_name = os.path.join(
-            constants.get_directory(),
-            "survival_probabilities",
-            "{0}_{1}_{2}_Survival_Probabilities.txt".format(
-                constants.get_medium(), constants.get_density(), constants.get_n_muon()
-            ),
-        )
+        # Check if a survival probability tensor has already been loaded
+        # If so, return the tensor that has already been loaded
+        # If not, load a tensor based on the set global propagation constants
+
+        if (
+            constants._current_survival_probability_tensor is not None
+            and constants._survival_probability_tensor_configuration
+            == {
+                "medium": constants.get_medium(),
+                "density": constants.get_reference_density(),
+                "n_muon": constants.get_n_muon(),
+            }
+        ):
+
+            if constants.get_verbose() > 1:
+                print(
+                    "Survival probabilities already loaded for {0} with density {1} gcm^-3 and {2} muons.".format(
+                        constants._survival_probability_tensor_configuration["medium"],
+                        constants._survival_probability_tensor_configuration["density"],
+                        constants._survival_probability_tensor_configuration["n_muon"],
+                    )
+                )
+
+            return constants._current_survival_probability_tensor
+
+        else:
+
+            file_name = os.path.join(
+                constants.get_directory(),
+                "survival_probabilities",
+                "{0}_{1}_{2}_survival_probabilities.npy".format(
+                    constants.get_medium(),
+                    constants.get_reference_density(),
+                    constants.get_n_muon(),
+                ),
+            )
 
     # Check if the file exists
+    # If it does, attempt to load the tensor from the file
 
     if os.path.isfile(file_name):
 
         if constants.get_verbose() > 1:
             print(f"Loading survival probabilities from {file_name}.")
 
-        # Check that the file has the correct numbers of energies and slant depths
+        survival_probability_tensor = np.load(file_name)
 
-        file = open(file_name, "r")
-        n_lines = len(file.read().splitlines())
-        file.close()
+        # Assert that the file have the correct numbers of energies and slant depths
 
-        # If so, read in the survival probabilities in from it
+        assert survival_probability_tensor.shape == (
+            len(constants.ENERGIES),
+            len(constants._SLANT_DEPTHS),
+            len(constants.ENERGIES),
+        )
 
-        if n_lines == len(constants.ENERGIES) * len(constants._SLANT_DEPTHS) * len(
-            constants.ENERGIES
-        ):
+        # If so, update the cache
 
-            survival_probability_tensor = np.reshape(
-                np.loadtxt(file_name)[:, 3],
-                (
-                    len(constants.ENERGIES),
-                    len(constants._SLANT_DEPTHS),
-                    len(constants.ENERGIES),
-                ),
-            )
+        if constants.get_verbose() > 1:
+            print("Loaded survival probabilities.")
 
-            if constants.get_verbose() > 1:
-                print("Loaded survival probabilities.")
+        update_cache(survival_probability_tensor)
 
-            update_cache(survival_probability_tensor)
-
-            return survival_probability_tensor
-
-        # If the file does not have the correct numbers of energies and slant depths, run the no_file() function
-
-        else:
-
-            return no_file(force=force)
+        return survival_probability_tensor
 
     # If the file does not exist, run the no_file() function
 

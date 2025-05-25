@@ -1,6 +1,33 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
-]
+requires = ["setuptools>=42", "setuptools-scm", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "mute"
+version = "3.0.0"
+description = "Muon Intensity Code"
+readme = "README.md"
+authors = [{ name = "William Woodley", email = "wwoodley@ualberta.ca" }]
+license = { text = "BSD 3-Clause License" }
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+]
+dependencies = [
+    "mceq>=1.3",
+    "daemonflux",
+    "numpy",
+    "requests",
+    "scipy",
+    "tqdm",
+]
+
+[project.urls]
+Changelog = "https://github.com/wjwoodley/mute/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/wjwoodley/mute/blob/main/docs/Tutorial.md"
+Homepage = "https://github.com/wjwoodley/mute"
+Issues = "https://github.com/wjwoodley/mute/issues"
